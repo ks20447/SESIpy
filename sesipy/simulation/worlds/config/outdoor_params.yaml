@@ -1,0 +1,19 @@
+floor: true
+roof: false
+walls: false
+boundary_z: null
+bound:
+  x: 50.0
+  y: 50.0
+generator:
+  type: "random"
+  fixed_obstacles: []
+  random_obstacles:
+    counts:
+      small: 10
+      medium: 5
+      large: 2
+    ranges:
+      small : [1, 3]
+      medium: [3, 5]
+      large: [5, 10]

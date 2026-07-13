@@ -1,0 +1,19 @@
+floor: false
+roof: false
+walls: false
+boundary_z: null
+bound:
+  x: 0.0
+  y: 0.0
+generator:
+  type: "mixed"
+  fixed_obstacles: []
+  random_obstacles:
+    counts:
+      small: 0
+      medium: 0
+      large: 0
+    ranges:
+      small : [0, 0]
+      medium: [0, 0]
+      large: [0, 0]
