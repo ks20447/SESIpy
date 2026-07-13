@@ -75,3 +75,51 @@ class Plot3D:
             self.pl.close()
         else:
             self.pl.show()
+            
+    def plot_indicator_line(self, loc, line_color, **kwargs):
+        line = pv.Line(
+            loc - np.array([0, 0, loc[-1]]),
+            loc + np.array([0, 0, kwargs.get("line_height", 5)]),
+        )
+        self.pl.add_mesh(
+            line,
+            line_width=kwargs.get("line_height", 5),
+            color=line_color,
+            opacity=kwargs.get("line_opacity", 1.0),
+        )
+
+    def plot_point_normals(self, points, normals, **kwargs):
+
+        point_data = pv.PolyData(points)
+        point_data.point_data["Normals"] = normals
+        arrows = point_data.glyph(
+            orient="Normals",
+            scale=False,
+            factor=kwargs.get("scale_factor", 0.5),
+            color_mode="vector",
+        )
+        self.pl.add_mesh(arrows)
+
+    def plot_antenna_array(self, antenna, scalars=None, normals=False, **kwargs):
+
+        loc = antenna.points_mesh.center
+        color = kwargs.get("color", "blue")
+
+        antenna_points = antenna.points_mesh.points
+
+        self.pl.add_points(
+            antenna_points,
+            color=color,
+            point_size=kwargs.get("point_size", 10),
+            render_points_as_spheres=True,
+            scalars=scalars,
+        )
+        
+        if antenna.structure_mesh is not None:
+            self.add_mesh(antenna.structure_mesh, scalars=scalars, **kwargs)
+
+        if kwargs.get("show_lines", True):
+            self.plot_indicator_line(loc, color, **kwargs)
+
+        if normals:
+            self.plot_point_normals(antenna_points, antenna.points_mesh.get_normals(), **kwargs)

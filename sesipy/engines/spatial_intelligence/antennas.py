@@ -1,0 +1,94 @@
+import meshio
+from scipy.constants import speed_of_light
+from .mesh_handlers import AntennaWrapper
+from lyceanem.base_classes import (
+    points,
+    structures,
+    antenna_structures,
+)
+
+
+class TransmitterArray(AntennaWrapper):
+
+    def __init__(self, freq, power, polarization):
+
+        super().__init__()
+
+        self.freq = freq
+        self.power = power
+        self.wavelength = speed_of_light / self.freq
+        self.polarization = polarization
+
+
+class ReceiverArray(AntennaWrapper):
+
+    def __init__(self, gain=1.0):
+
+        super().__init__()
+
+        self.gain = gain
+        self._target_freq = None
+        self._target_wavelength = None
+        self._steering_points = None
+        self._beamform_array = None
+        self._aoa_threshold = None
+
+    @property
+    def target_freq(self):
+        return self._target_freq
+
+    @target_freq.setter
+    def target_freq(self, freq):
+        self._target_freq = freq
+        self._target_wavelength = speed_of_light / self.target_freq
+
+    @property
+    def target_wavelength(self):
+        return self._target_wavelength
+
+    @property
+    def steering_points(self):
+        return self._steering_points
+
+    @steering_points.setter
+    def steering_points(self, points):
+        self._steering_points = points
+
+    @property
+    def beamform_array(self):
+        return self._beamform_array
+
+    @beamform_array.setter
+    def beamform_array(self, points):
+        self._beamform_array = points
+
+    @property
+    def aoa_threshold(self):
+        return self._aoa_threshold
+
+    @aoa_threshold.setter
+    def aoa_threshold(self, value):
+        self._aoa_threshold = value
+
+    def create_aperture(self):
+
+        if self.points_mesh is None:
+            raise ValueError("No antenna points have been assigned.")
+
+        burner = meshio.Mesh(
+            points=np.array([[0.0, 0.0, 0.0]]),
+            cells=[],
+        )
+        burner.point_data["Normals"] = np.array([[0.0, 0.0, 1.0]])
+        burner.point_data["Area"] = np.array([[1.0]])
+
+        aperture_points = points([burner, self.points_mesh.meshio_mesh])
+
+        aperture_structure = structures(
+            [self.structure_mesh.meshio_mesh] if self.structure_mesh is not None else []
+        )
+
+        self._aperture = antenna_structures(
+            aperture_structure,
+            aperture_points,
+        )
