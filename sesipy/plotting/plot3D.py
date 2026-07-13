@@ -1,6 +1,6 @@
 import numpy as np
 import pyvista as pv
-from ..utility.formatting import Symbols
+from ..utils.formatting import Symbols
 
 class Plot3D:
 
