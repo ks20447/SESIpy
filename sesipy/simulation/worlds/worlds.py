@@ -15,6 +15,8 @@ class Indoor(WorldBuilder):
             params = yaml.safe_load(f)
 
         super().__init__(params=params, scatter_resolution=scatter_resolution)
+        
+        self.create_pgm()
 
 
 class Outdoor(WorldBuilder):
@@ -27,3 +29,5 @@ class Outdoor(WorldBuilder):
         np.random.seed(seed)
 
         super().__init__(params=params, scatter_resolution=scatter_resolution)
+        
+        self.create_pgm()

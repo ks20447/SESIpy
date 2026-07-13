@@ -109,3 +109,14 @@ class Plot2D:
             
         if self.grid:
             self.ax.grid(True)
+            
+    def plot_pgm(self, img, name=None):
+        
+        cax = self.ax.imshow(img, cmap='gray', origin='upper')
+        
+        self.ax.set_xlabel("X (pixels)")
+        self.ax.set_ylabel("Y (pixels)")
+        self.ax.grid(False)
+        
+        if self.equal_aspect:
+            self.ax.set_aspect("equal")

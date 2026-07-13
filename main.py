@@ -10,10 +10,10 @@ def main():
     plotter = Plot2D(1, 2)
 
     plotter.set_ax(0, 0)
-    plotter.plot_polygon(world_indoor.floor_plan)
+    plotter.plot_pgm(world_indoor.pgm)
 
     plotter.set_ax(0, 1)
-    plotter.plot_polygon(world_outdoor.floor_plan)
+    plotter.plot_pgm(world_outdoor.pgm)
 
     plotter.show()
 

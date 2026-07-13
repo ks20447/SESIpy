@@ -1,7 +1,10 @@
+import cv2
+import yaml
 import shapely as sp
 import pyvista as pv
 from .utils import *
 from shapely import wkb
+from pathlib import Path
 
 class World:
 
@@ -15,6 +18,9 @@ class World:
         self._floor_plan = polygon
         self._scatterers = scatterers
         self._blockers = blockers
+        
+        self._pgm = None
+        self._pgm_params = {}
 
         self._combined_scatter_mesh = self.combine_meshes(self.scatterers)
         self._combined_blocker_mesh = self.combine_meshes(self.blockers)
@@ -22,6 +28,10 @@ class World:
     @property
     def floor_plan(self):
         return self._floor_plan
+    
+    @property
+    def pgm(self):
+        return self._pgm
 
     @property
     def bounds(self):
@@ -138,7 +148,26 @@ class World:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         meshio.write(path, self.blocker_mesh, file_format=file_format)
+        
+    def save_map(self, filename):
+        
+        path = Path(filename)
+        path.parent.mkdir(parents=True, exist_ok=True)
 
+        cv2.imwrite(f"{path}.pgm", self.pgm)
+
+        yaml_data = {
+            "image": f"{path}.pgm",
+            "mode": "trinary",
+            "resolution": float(self._pgm_params["res"]),
+            "origin": [float(self._pgm_params["minx"]), float(self._pgm_params["miny"]), 0.0],
+            "negate": 0,
+            "occupied_thresh": 0.65,
+            "free_thresh": 0.196,
+        }
+
+        with open(f"{path}.yaml", "w") as f:
+            yaml.dump(yaml_data, f, default_flow_style=None, sort_keys=False)
 
 
 class WorldBuilder(World):
@@ -401,3 +430,45 @@ class WorldBuilder(World):
         )
 
         return scatterers
+    
+    def create_pgm(self, boundary=True):
+        
+        resolution = 0.05
+        padding = 1.0
+
+        minx, miny, maxx, maxy = self.floor_plan.bounds
+        minx -= padding
+        miny -= padding
+        maxx += padding
+        maxy += padding
+
+        width = int(np.ceil((maxx - minx) / resolution))
+        height = int(np.ceil((maxy - miny) / resolution))
+
+        img = np.full((height, width), 205, dtype=np.uint8)
+
+        def coords_to_pixels(coords):
+            pts = []
+            for x, y in coords:
+                px = int((x - minx) / resolution)
+                py = height - int((y - miny) / resolution)
+                pts.append([px, py])
+            return np.array([pts], dtype=np.int32)
+
+        ext_pts = coords_to_pixels(self.floor_plan.exterior.coords)
+        cv2.fillPoly(img, ext_pts, 254)
+
+        for interior in self.floor_plan.interiors:
+            int_pts = coords_to_pixels(interior.coords)
+            cv2.fillPoly(img, int_pts, 0)
+
+        if boundary:
+            cv2.polylines(img, ext_pts, isClosed=True, color=0, thickness=1)
+            
+        self._pgm = img
+        self._pgm_params = {
+            "res" : resolution,
+            "minx" : minx,
+            "miny" : miny
+        }
+
