@@ -11,6 +11,8 @@ from .engines import (
     Scene,
     scattering_power,
     to_dBm,
+    smooth_point_data,
+    threshold_point_data,
 )
 
 __all__ = [
@@ -33,4 +35,6 @@ __all__ = [
     "Scene",
     "scattering_power",
     "to_dBm",
+    "smooth_point_data",
+    "threshold_point_data",
 ]

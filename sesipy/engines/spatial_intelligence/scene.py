@@ -84,12 +84,14 @@ class Scene:
 
     def set_scene(self):
 
-        self.transmitter.create_aperture()
-        self.receiver.create_aperture()
+        if self.transmitter:
+            self.transmitter.create_aperture()
+        if self.receiver:
+            self.receiver.create_aperture()
 
         self.blocker_structure = structures(self.blockers)
         self.scatter_points = points(self.scatterers).export_points()
-        self.scatter_points.points += 0.001 * self.scatter_points.point_data["Normals"]
+        self.scatter_points.points += 0.00 * self.scatter_points.point_data["Normals"]
 
     def calculate_receiver_scattering(self):
 
@@ -114,3 +116,29 @@ class Scene:
             )
 
         return np.array([Ex[0][1::]]), np.array([Ey[0][1::]]), np.array([Ez[0][1::]])
+    
+    
+    def calculate_scene_los(self, chunks=1):
+
+        self.set_scene()
+
+        with suppress_c_output() if self._suppress_output else nullcontext():
+            Ex, Ey, Ez = fd.calculate_scattering(
+                aperture_coords=self.transmitter.aperture.export_all_points(),
+                sink_coords=self.scatter_points,
+                antenna_solid=self.blocker_structure.export_combined_meshio(),
+                desired_E_axis=self.transmitter.aperture.excitation_function(
+                    self.transmitter.polarization,
+                    wavelength=self.transmitter.wavelength,
+                    transmit_power=self.transmitter.power,
+                ),
+                scatter_points=self.scatter_points,
+                wavelength=self.transmitter.wavelength,
+                scattering=0,
+                project_vectors=False,
+                elements=True,
+                cuda=self.cuda,
+                chunks=chunks,
+            )
+
+        return Ex, Ey, Ez

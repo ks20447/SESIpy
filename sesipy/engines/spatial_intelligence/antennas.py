@@ -114,7 +114,7 @@ class IsotropicReceiver(ReceiverArray):
         
         super().__init__(gain=1.0)
         
-        self.points = np.vstack(ArrayFactory.spherical(12, 7, 0.1))
+        self.points = np.vstack(ArrayFactory.spherical(12, 7, 0.01))
         self.structure = None
         
         self.normal_factory.apply("outward")

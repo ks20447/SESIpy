@@ -7,35 +7,37 @@ from sesipy.engines import (
     Scene,
     scattering_power,
     to_dBm,
+    smooth_point_data,
+    threshold_point_data,
 )
 
 
 def main():
 
-    world_indoor = Indoor(scatter_resolution=1.0)
+    world_indoor = Indoor(scatter_resolution=0.25)
 
     transmitter = PointSource(2.4e9, 0.1)
-    transmitter.translate_to(np.array([0.0, 0.0, 0.5]))
+    transmitter.translate_to(np.array([15.0, -10.0, 0.5]))
 
-    receiver = IsotropicReceiver()
-    receiver.translate_to(np.array([1.0, 1.0, 0.5]))
-
-    scene = Scene(scatter=True, cuda=True)
+    scene = Scene(scatter=False, cuda=True)
     scene.transmitter = transmitter
 
     scene.add_scatterers(world_indoor.scatterers)
     scene.add_blockers([world_indoor.blocker_mesh])
 
+    scatter = scene.calculate_scene_los(chunks=1)
+    los = to_dBm(scattering_power(scatter)[0])
+
+    scatter_mesh = world_indoor.scatter_mesh
+    scatter_mesh.point_data["los"] = los
+    threshold_point_data(scatter_mesh, "los", np.min(los), 0.0, 1.0)
+    smooth_point_data(scatter_mesh, "los")
+    threshold_point_data(scatter_mesh, "los", 0.7, 0.0, 1.0)
+
     plotter = Plot3D()
-    plotter.plot_scene(scene, scalars=None, normals=False)
 
-    scene.receiver = receiver
-    scatter = scene.calculate_receiver_scattering()
-    
-    power = to_dBm(scattering_power(scatter))
-    receiver.set_point_data("Power", power)
-
-    plotter.plot_antenna_array(receiver, scalars="Power")
+    plotter.add_mesh(scatter_mesh, scalars="los")
+    plotter.show_bounds()
 
     plotter.show()
 

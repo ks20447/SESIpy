@@ -2,7 +2,7 @@
 
 from .antennas import PointSource, IsotropicReceiver, TransmitterArray, ReceiverArray
 from .scene import Scene
-from .utils import scattering_power, to_dBm
+from .utils import scattering_power, to_dBm, smooth_point_data, threshold_point_data
 
 __all__ = [
     "PointSource",
@@ -12,4 +12,6 @@ __all__ = [
     "Scene",
     "scattering_power",
     "to_dBm",
+    "smooth_point_data",
+    "threshold_point_data",
 ]
