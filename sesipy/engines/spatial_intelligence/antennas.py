@@ -1,6 +1,8 @@
 import meshio
+import numpy as np
 from scipy.constants import speed_of_light
 from .mesh_handlers import AntennaWrapper
+from ...utils import ArrayFactory
 from lyceanem.base_classes import (
     points,
     structures,
@@ -92,3 +94,28 @@ class ReceiverArray(AntennaWrapper):
             aperture_structure,
             aperture_points,
         )
+        
+        
+class PointSource(TransmitterArray):
+    
+    def __init__(self, freq, power):
+        
+        super().__init__(freq, power, np.array([0.0, 0.0, 1.0], dtype=np.complex64))
+            
+        self.points = np.array([[0.0, 0.0, 0.0]])
+        self.structure = None
+        self.point_normals = np.array([[0.0, 0.0, 1.0]])
+        self.point_area = np.array([1.0])
+        
+        
+class IsotropicReceiver(ReceiverArray):
+    
+    def __init__(self):
+        
+        super().__init__(gain=1.0)
+        
+        self.points = np.vstack(ArrayFactory.spherical(12, 7, 0.1))
+        self.structure = None
+        
+        self.normal_factory.apply("outward")
+        self.point_area = np.array([1.0] * len(self.points_mesh.points))

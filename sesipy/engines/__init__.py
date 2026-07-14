@@ -1,1 +1,1 @@
-from .spatial_intelligence import TransmitterArray, ReceiverArray
+from .spatial_intelligence import PointSource, IsotropicReceiver, TransmitterArray, ReceiverArray

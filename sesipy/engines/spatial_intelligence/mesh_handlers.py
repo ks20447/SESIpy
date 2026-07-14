@@ -1,20 +1,56 @@
 import meshio
 import numpy as np
 import pyvista as pv
-from lyceanem.geometry.geometryfunctions import mesh_translate, mesh_rotate
+from scipy.spatial.transform import Rotation
 from lyceanem.base_classes import (
     points,
     structures,
     antenna_structures,
 )
+from ...utils import NormalFactory
+
+# from lyceanem.geometry.geometryfunctions import mesh_translate, mesh_rotate
+
+# def translate(mesh, vec):
+#     return mesh_translate(mesh, vec)
 
 
-def translate(mesh, vec):
-    return mesh_translate(mesh, vec)
+# def rotate(mesh, vec, center):
+#     return mesh_rotate(mesh, vec, rotation_centre=center)
 
 
-def rotate(mesh, vec, center):
-    return mesh_rotate(mesh, vec, rotation_centre=center)
+def translate(mesh: meshio.Mesh, translation: np.ndarray) -> None:
+    translation = np.asarray(translation, dtype=float)
+    mesh.points += translation
+    return mesh
+
+
+def rotate(
+    mesh: meshio.Mesh,
+    rotation: np.ndarray,
+    center: np.ndarray | None = None,
+) -> None:
+    if center is None:
+        center = mesh.points.mean(axis=0)
+    else:
+        center = np.asarray(center, dtype=float)
+
+    R = Rotation.from_euler("xyz", rotation).as_matrix()
+
+    mesh.points[:] = (mesh.points - center) @ R.T + center
+
+    if "Normals" in mesh.point_data:
+        mesh.point_data["Normals"][:] = (
+            mesh.point_data["Normals"] @ R.T
+        )
+
+    if "Normals" in mesh.cell_data:
+        mesh.cell_data["Normals"] = [
+            normals @ R.T for normals in mesh.cell_data["Normals"]
+        ]
+        
+    return mesh
+
 
 
 class LyceanObject:
@@ -95,6 +131,7 @@ class AntennaArray:
         self.points_mesh = None
         self.structure_mesh = None
         self._aperture = None
+        self._normal_factory = None
 
     @property
     def aperture(self):
@@ -104,6 +141,12 @@ class AntennaArray:
 
         if self.points_mesh is None:
             raise ValueError("No antenna points have been assigned.")
+        
+        if "Normals" not in self.points_mesh.point_data:
+            raise ValueError("Antenna point normals have not been assigned")
+        
+        if "Area" not in self.points_mesh.point_data:
+            raise ValueError("Antenna point area have not been assigned")
 
         aperture_points = points([self.points_mesh.meshio_mesh])
 
@@ -154,6 +197,8 @@ class AntennaWrapper(AntennaArray):
             self.points_mesh = None
         else:
             self.points_mesh = LyceanObject(self._points)
+            self._normal_factory = NormalFactory(self.points_mesh.meshio_mesh)
+            self.normal_factory.apply(None)
 
         if self._structure is None:
             self.structure_mesh = None
@@ -169,6 +214,10 @@ class AntennaWrapper(AntennaArray):
     def points(self, points: np.ndarray):
         self._points = meshio.Mesh(points=points, cells=[])
         self._update_meshes()
+        
+    @property
+    def normal_factory(self):
+        return self._normal_factory
 
     @property
     def structure(self):
@@ -194,3 +243,24 @@ class AntennaWrapper(AntennaArray):
     @point_area.setter
     def point_area(self, area):
         self.points_mesh.set_area(area)
+        
+    def _apply_normals(self, rot=None):
+        if self.normal_factory.mode is not None:
+            kwargs = self.normal_factory.get_args()
+            self.normal_factory.apply(**kwargs, rotation=rot)
+        
+    def translate(self, vec):
+        super().translate(vec)
+        self._apply_normals()
+
+    def rotate(self, vec, center=np.zeros((1, 3))):
+        super().rotate(vec, center)
+        self._apply_normals(rot=vec)
+
+    def translate_origin(self):
+        super().translate_origin()
+        self._apply_normals()
+
+    def translate_to(self, coord):
+        super().translate_to(coord)
+        self._apply_normals()
