@@ -142,10 +142,10 @@ class AntennaArray:
         if self.points_mesh is None:
             raise ValueError("No antenna points have been assigned.")
         
-        if "Normals" not in self.points_mesh.point_data:
+        if "Normals" not in self.points_mesh.meshio_mesh.point_data:
             raise ValueError("Antenna point normals have not been assigned")
         
-        if "Area" not in self.points_mesh.point_data:
+        if "Area" not in self.points_mesh.meshio_mesh.point_data:
             raise ValueError("Antenna point area have not been assigned")
 
         aperture_points = points([self.points_mesh.meshio_mesh])
@@ -179,6 +179,9 @@ class AntennaArray:
 
     def set_point_normals(self, normals):
         self.points_mesh.set_normals(normals)
+        
+    def set_point_data(self, key, data):
+        self.points_mesh.meshio_mesh.point_data[key] = data
 
 
 class AntennaWrapper(AntennaArray):

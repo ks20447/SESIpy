@@ -112,7 +112,7 @@ class Plot3D:
             color=color,
             point_size=kwargs.get("point_size", 10),
             render_points_as_spheres=True,
-            scalars=scalars,
+            scalars=antenna.points_mesh.meshio_mesh.point_data.get(scalars, None),
         )
         
         if antenna.structure_mesh is not None:
@@ -123,3 +123,59 @@ class Plot3D:
 
         if normals:
             self.plot_point_normals(antenna_points, antenna.points_mesh.get_normals(), **kwargs)
+            
+
+    def plot_scatterers(self, scatterers, scalars=None, normals=False, **kwargs):
+
+        for scatter in scatterers:
+            self.pl.add_mesh(
+                scatter,
+                color=kwargs.get("color_s", "lightgrey"),
+                scalars=scalars,
+                opacity=kwargs.get("scatterers_opacity", 0.75),
+                show_edges=kwargs.get("show_edges", True),
+                cmap=kwargs.get("cmap", "viridis")
+            )
+            
+            if normals:
+                self.plot_point_normals(scatter.points, scatter.point_data["Normals"])
+                
+                
+    def plot_blockers(self, blockers, scalars=None, normals=False, **kwargs):
+
+        for block in blockers:
+            self.pl.add_mesh(
+                block,
+                color=kwargs.get("color_b", "grey"),
+                scalars=scalars,
+                opacity=kwargs.get("blockers_opacity", 0.75),
+                show_edges=kwargs.get("show_edges", False),
+                cmap=kwargs.get("cmap", "viridis")
+            )
+            
+            if normals:
+                self.plot_point_normals(block.points, block.point_data["Normals"])
+            
+    
+    def plot_scene(self, scene, scalars=None, **kwargs):
+
+        receiver = scene.receiver
+        transmitter = scene.transmitter
+        scatterers = scene.scatterers
+        
+        color_r = kwargs.get("color_r", "blue")
+        color_t = kwargs.get("color_t", "red")
+
+        if receiver is not None:
+            self.plot_antenna_array(receiver, scalars=scalars, color=color_r, **kwargs)
+
+        if transmitter is not None:
+            self.plot_antenna_array(transmitter, scalars=scalars, color=color_t, **kwargs)
+
+        if len(scatterers) > 0:
+            self.plot_scatterers(scatterers, scalars=scalars, **kwargs)
+
+        if kwargs.get("show_bounds", True):
+            self.show_bounds()
+        if kwargs.get("show_origin", True):
+            self.show_origin(labels=False)
