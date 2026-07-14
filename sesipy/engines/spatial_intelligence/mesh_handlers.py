@@ -9,15 +9,6 @@ from lyceanem.base_classes import (
 from .utils import translate, rotate
 from ...utils import NormalFactory
 
-# from lyceanem.geometry.geometryfunctions import mesh_translate, mesh_rotate
-
-# def translate(mesh, vec):
-#     return mesh_translate(mesh, vec)
-
-
-# def rotate(mesh, vec, center):
-#     return mesh_rotate(mesh, vec, rotation_centre=center)
-
 class LyceanObject:
 
     def __init__(self, mesh):

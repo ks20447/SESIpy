@@ -13,6 +13,7 @@ from .engines import (
     to_dBm,
     smooth_point_data,
     threshold_point_data,
+    create_mesh_copies,
 )
 
 __all__ = [
@@ -37,4 +38,5 @@ __all__ = [
     "to_dBm",
     "smooth_point_data",
     "threshold_point_data",
+    "create_mesh_copies",
 ]

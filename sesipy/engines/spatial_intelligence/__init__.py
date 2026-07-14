@@ -2,7 +2,13 @@
 
 from .antennas import PointSource, IsotropicReceiver, TransmitterArray, ReceiverArray
 from .scene import Scene
-from .utils import scattering_power, to_dBm, smooth_point_data, threshold_point_data
+from .utils import (
+    scattering_power,
+    to_dBm,
+    smooth_point_data,
+    threshold_point_data,
+    create_mesh_copies,
+)
 
 __all__ = [
     "PointSource",
@@ -14,4 +20,5 @@ __all__ = [
     "to_dBm",
     "smooth_point_data",
     "threshold_point_data",
+    "create_mesh_copies",
 ]
