@@ -1,13 +1,16 @@
 import meshio
 import numpy as np
+import pyvista as pv
 from scipy.constants import speed_of_light
 from .mesh_handlers import AntennaWrapper
+from .utils import scattering_power, to_dBm
 from ...utils import ArrayFactory
 from lyceanem.base_classes import (
     points,
     structures,
     antenna_structures,
 )
+from lyceanem.electromagnetics.beamforming import WavefrontWeights
 
 
 class TransmitterArray(AntennaWrapper):
@@ -29,6 +32,7 @@ class ReceiverArray(AntennaWrapper):
         super().__init__()
 
         self.gain = gain
+        self._aperture_gain = None
         self._target_freq = None
         self._target_wavelength = None
         self._steering_points = None
@@ -43,10 +47,19 @@ class ReceiverArray(AntennaWrapper):
     def target_freq(self, freq):
         self._target_freq = freq
         self._target_wavelength = speed_of_light / self.target_freq
+        self.aperture_gain = (self.target_wavelength**2) / (4 * np.pi)
 
     @property
     def target_wavelength(self):
         return self._target_wavelength
+    
+    @property
+    def aperture_gain(self):
+        return self._aperture_gain
+    
+    @aperture_gain.setter
+    def aperture_gain(self, val):
+        self._aperture_gain = val * self.gain
 
     @property
     def steering_points(self):
@@ -94,6 +107,21 @@ class ReceiverArray(AntennaWrapper):
             aperture_structure,
             aperture_points,
         )
+        
+    def wave_front_steering(self, array_points, location, scatter):
+        
+        steering_mesh = pv.PolyData(self.steering_points + location)
+        steering_power = np.zeros(steering_mesh.number_of_points)
+        
+        for i, vec in enumerate(self.steering_points):
+            steering_vec = vec - location
+            weights = WavefrontWeights(array_points, steering_vec, self.target_wavelength)
+            power = to_dBm(scattering_power(scatter, weights=weights) * self.aperture_gain)
+            steering_power[i] = power
+            
+        steering_mesh.point_data["Power"] = steering_power
+        
+        return pv.to_meshio(steering_mesh)
         
         
 class PointSource(TransmitterArray):
