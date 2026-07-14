@@ -1,10 +1,13 @@
+import sys
 import warnings
 import numpy as np
 import lyceanem.models.frequency_domain as fd
+from tqdm import tqdm
 from contextlib import nullcontext
 from .mesh_handlers import LyceanObject
 from ...utils import suppress_c_output
 from lyceanem.base_classes import points, structures
+from .utils import create_mesh_copies
 
 
 class Scene:
@@ -142,3 +145,53 @@ class Scene:
             )
 
         return Ex, Ey, Ez
+    
+    def sample_receiver_scattering(self, locations, orientations):
+
+        sample_scatter = []
+        sample_meshes = create_mesh_copies(self.receiver.points_mesh.meshio_mesh, locations, orientations)
+
+        for vec, rot in tqdm(
+            zip(locations, orientations),
+            desc="Processing Sample Points: Scatter",
+            total=len(locations),
+            file=sys.stderr,
+            dynamic_ncols=True,
+            disable=False,
+        ):
+
+            self.receiver.translate_to(vec)
+            self.receiver.rotate(rot, center=self.receiver.points_mesh.center)
+
+            scatter = self.calculate_receiver_scattering()
+            sample_scatter.append(scatter)
+            
+            self.receiver.rotate(-rot, center=self.receiver.points_mesh.center)
+            
+
+        return sample_scatter, sample_meshes
+    
+    
+    def sample_transmitter_los(self, locations, orientations):
+
+        sample_los = []
+        sample_meshes = create_mesh_copies(self.transmitter.points_mesh.meshio_mesh, locations, orientations)
+
+        for vec, rot in tqdm(
+            zip(locations, orientations),
+            desc="Processing Sample Points: LOS",
+            total=len(locations),
+            file=sys.stderr,
+            dynamic_ncols=True,
+            disable=False,
+        ):
+
+            self.transmitter.translate_to(vec)
+            self.transmitter.rotate(rot, center=self.transmitter.points_mesh.center)
+
+            scatter = self.calculate_scene_los()
+            sample_los.append(scatter)
+
+            self.transmitter.rotate(-rot, center=self.transmitter.points_mesh.center)
+
+        return sample_los, sample_meshes

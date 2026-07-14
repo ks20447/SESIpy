@@ -1,5 +1,40 @@
+import copy
 import meshio
 import numpy as np
+from scipy.spatial.transform import Rotation
+
+def translate(mesh: meshio.Mesh, translation: np.ndarray) -> None:
+    translation = np.asarray(translation, dtype=float)
+    mesh.points += translation
+    return mesh
+
+
+def rotate(
+    mesh: meshio.Mesh,
+    rotation: np.ndarray,
+    center: np.ndarray | None = None,
+) -> None:
+    if center is None:
+        center = mesh.points.mean(axis=0)
+    else:
+        center = np.asarray(center, dtype=float)
+
+    R = Rotation.from_euler("xyz", rotation).as_matrix()
+
+    mesh.points[:] = (mesh.points - center) @ R.T + center
+
+    if "Normals" in mesh.point_data:
+        mesh.point_data["Normals"][:] = (
+            mesh.point_data["Normals"] @ R.T
+        )
+
+    if "Normals" in mesh.cell_data:
+        mesh.cell_data["Normals"] = [
+            normals @ R.T for normals in mesh.cell_data["Normals"]
+        ]
+        
+    return mesh
+
 
 def scattering_power(scattering, weights=None, lower_bound=1e-15):
 
@@ -61,3 +96,21 @@ def threshold_point_data(
 ):
     values = mesh.point_data[key]
     mesh.point_data[key] = np.where(values > threshold, high, low)
+    
+    
+def create_mesh_copies(mesh : meshio.Mesh, locations : np.ndarray, orientations : np.ndarray):
+    
+    meshes = []
+    
+    for location, orientation in zip(locations, orientations):
+        
+        mesh_copy = copy.deepcopy(mesh)
+        mesh_copy = rotate(mesh_copy, orientation)
+        mesh_copy = translate(mesh_copy, location)
+        
+        meshes.append(mesh_copy)
+    
+    return meshes
+        
+        
+        

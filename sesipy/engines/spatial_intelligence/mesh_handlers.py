@@ -1,12 +1,12 @@
 import meshio
 import numpy as np
 import pyvista as pv
-from scipy.spatial.transform import Rotation
 from lyceanem.base_classes import (
     points,
     structures,
     antenna_structures,
 )
+from .utils import translate, rotate
 from ...utils import NormalFactory
 
 # from lyceanem.geometry.geometryfunctions import mesh_translate, mesh_rotate
@@ -17,41 +17,6 @@ from ...utils import NormalFactory
 
 # def rotate(mesh, vec, center):
 #     return mesh_rotate(mesh, vec, rotation_centre=center)
-
-
-def translate(mesh: meshio.Mesh, translation: np.ndarray) -> None:
-    translation = np.asarray(translation, dtype=float)
-    mesh.points += translation
-    return mesh
-
-
-def rotate(
-    mesh: meshio.Mesh,
-    rotation: np.ndarray,
-    center: np.ndarray | None = None,
-) -> None:
-    if center is None:
-        center = mesh.points.mean(axis=0)
-    else:
-        center = np.asarray(center, dtype=float)
-
-    R = Rotation.from_euler("xyz", rotation).as_matrix()
-
-    mesh.points[:] = (mesh.points - center) @ R.T + center
-
-    if "Normals" in mesh.point_data:
-        mesh.point_data["Normals"][:] = (
-            mesh.point_data["Normals"] @ R.T
-        )
-
-    if "Normals" in mesh.cell_data:
-        mesh.cell_data["Normals"] = [
-            normals @ R.T for normals in mesh.cell_data["Normals"]
-        ]
-        
-    return mesh
-
-
 
 class LyceanObject:
 
