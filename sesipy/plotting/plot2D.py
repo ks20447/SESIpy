@@ -1,14 +1,16 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from ..utils.formatting import Symbols
+from shapely.geometry import Polygon, MultiPolygon
 
 
 def mpl_use_latex(val : bool):
-    plt.rcParams.update({"text.usetex": val, "font.family": "Times"})
+    rcParams.update({"text.usetex": val, "font.family": "Times"})
     
 def mpl_font_size(size : int):
-    plt.rcParams.update({"font.size": size})
+    rcParams.update({"font.size": size})
     
 def mpl_use_seaborn():
     mpl.style.use("seaborn-v0_8")
@@ -104,21 +106,58 @@ class Plot2D:
     def grid(self, val : bool):
         self._grid = val
         
-    def plot_polygon(self, polygon, c="k", fill_holes=False):
-        
+
+    def plot_polygon(self, polygon, c="k", fill_outline=False, fill_holes=False, **kwargs):
+
+        alpha = kwargs.get("opacity", 1.0)
+
+        if isinstance(polygon, MultiPolygon):
+            for poly in polygon.geoms:
+                self.plot_polygon(
+                    poly,
+                    c=c,
+                    fill_outline=fill_outline,
+                    fill_holes=fill_holes,
+                    opacity=alpha,
+                )
+            return
+
         x, y = polygon.exterior.xy
-        self.ax.plot(x, y, c=c)
+
+        if fill_outline:
+            self.ax.fill(x, y, c=c, alpha=alpha)
+        else:
+            self.ax.plot(x, y, c=c, alpha=alpha)
 
         for interior in polygon.interiors:
             xi, yi = interior.xy
-            
+
             if fill_holes:
-                self.ax.fill(xi, yi, c=c)
+                self.ax.fill(xi, yi, c=c, alpha=alpha)
             else:
-                self.ax.plot(xi, yi, c=c)
-            
-        if self.grid:
-            self.ax.grid(True)
+                self.ax.plot(xi, yi, c=c, alpha=alpha)
+           
+                
+    def plot_fov(self, origin, polygon, c=None):
+
+        if c is None:
+            c = self.ax._get_lines.get_next_color()
+
+        self.plot_polygon(
+            polygon,
+            c=c,
+            fill_outline=True,
+            fill_holes=False,
+            opacity=0.7,
+        )
+
+        self.plot_scatter(
+            np.array([origin]),
+            separate=False,
+            marker="o",
+            c=c,
+        )
+                
             
     def plot_line(self, points, line_style="-"):
         
@@ -126,15 +165,16 @@ class Plot2D:
             
         
     def plot_scatter(self, points, separate=False, **kwargs):
-        
+
         marker = kwargs.get("marker", "x")
         s = kwargs.get("s", 50)
-        
+        c = kwargs.get("c", None)
+
         if separate:
             for (x, y) in points:
-                self.ax.scatter(x, y, s=s, marker=marker)
+                self.ax.scatter(x, y, s=s, marker=marker, c=c)
         else:
-            self.ax.scatter(points[:, 0], points[:, 1], s=s, marker=marker)
+            self.ax.scatter(points[:, 0], points[:, 1], s=s, marker=marker, c=c)
             
         
     def plot_arrows(self, points, theta, separate=False, **kwargs):

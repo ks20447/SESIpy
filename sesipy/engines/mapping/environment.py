@@ -9,6 +9,9 @@ class Environment:
 
         self.env2D = polygon
         self.env3D = mesh
+        
+    def polygon_intersect_2D(self, polygon):
+        return self.env2D.intersection(polygon).buffer(0.0)
 
     def grid_sample_2D(self, spacing, buffer=0.0, z=0.0):
 
