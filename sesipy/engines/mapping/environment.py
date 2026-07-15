@@ -67,8 +67,16 @@ class Environment:
         points = points[mask]
 
         theta = np.full(points.shape[0], theta)
+        
+        orientations = np.column_stack(
+            (
+                np.cos(np.radians(theta)),
+                np.sin(np.radians(theta)),
+                np.zeros_like(theta),
+            )
+        )
 
-        return points, theta
+        return points, orientations
     
     
     def box_sample_3D(

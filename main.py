@@ -1,9 +1,8 @@
 import meshio
 import numpy as np
-from sesipy.simulation.worlds.worlds import Indoor
-from sesipy.plotting.plot2D import Plot2D
-from sesipy.plotting.plot3D import Plot3D
-from sesipy.engines.mapping.environment import Environment
+from sesipy.simulation import Indoor
+from sesipy.plotting import Plot2D, Plot3D
+from sesipy.engines import Environment
 
 
 def main():
@@ -17,14 +16,7 @@ def main():
 
     box = env.box_sample_3D(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0)
 
-    path3D, theta = env.linear_path_3D((0, 0, 0), (1, 1, 1), 3)
-    vectors = np.column_stack(
-        (
-            np.cos(np.radians(theta)),
-            np.sin(np.radians(theta)),
-            np.zeros_like(theta),
-        )
-    )
+    path3D, orients = env.linear_path_3D((0, 0, 0), (1, 1, 1), 3)
 
     plotter = Plot2D(1, 1)
     plotter.plot_polygon(env.env2D)
@@ -35,7 +27,7 @@ def main():
     plotter = Plot3D(1, 1)
     plotter.plot_scatterers(world_indoor.scatterers)
     plotter.add_mesh(box, color="red")
-    plotter.plot_path(path3D, vectors)
+    plotter.plot_path(path3D, orients)
     plotter.show()
 
 

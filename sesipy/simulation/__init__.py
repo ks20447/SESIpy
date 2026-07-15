@@ -1,5 +1,10 @@
 """Simulation module for Sesipy."""
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .worlds import World, Indoor, Outdoor, Obstacle
+
 __all__ = [
     "World",
     "Indoor",

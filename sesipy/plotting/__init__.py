@@ -1,5 +1,11 @@
 """Plotting module for Sesipy visualizations."""
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .plot2D import Plot2D
+    from .plot3D import Plot3D
+
 __all__ = [
     "Plot3D",
     "Plot2D",

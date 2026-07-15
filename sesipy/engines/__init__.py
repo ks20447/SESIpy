@@ -1,5 +1,22 @@
 """Engines module for Sesipy."""
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .spatial_intelligence import (
+        PointSource,
+        IsotropicReceiver,
+        TransmitterArray,
+        ReceiverArray,
+        Scene,
+        scattering_power,
+        to_dBm,
+        smooth_point_data,
+        threshold_point_data,
+        create_mesh_copies,
+    )
+    from .mapping import Environment
+
 __all__ = [
     "PointSource",
     "IsotropicReceiver",
