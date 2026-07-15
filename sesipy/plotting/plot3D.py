@@ -7,7 +7,7 @@ class Plot3D:
     def __init__(self, shape=(1, 1)):
 
         self.pl = pv.Plotter(shape=shape)
-        self.sym = Symbols()
+        self._sym = Symbols()
         
     def set_plot(self, ind=(0, 0)):
         self.pl.subplot(*ind)
@@ -67,6 +67,10 @@ class Plot3D:
     @property
     def plotter(self):
         return self.pl
+    
+    @property
+    def sym(self):
+        return self._sym
 
     def show(self, filename=None):
         if filename is not None:

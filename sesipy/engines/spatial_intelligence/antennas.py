@@ -108,19 +108,30 @@ class ReceiverArray(AntennaWrapper):
             aperture_points,
         )
         
-    def wave_front_steering(self, array_points, location, scatter):
-        
+    def wave_front_steering(self, array_points, scatter):
+
+        location = np.mean(array_points, axis=0)
+
         steering_mesh = pv.PolyData(self.steering_points + location)
-        steering_power = np.zeros(steering_mesh.number_of_points)
-        
-        for i, vec in enumerate(self.steering_points):
-            steering_vec = vec - location
-            weights = WavefrontWeights(array_points, steering_vec, self.target_wavelength)
-            power = to_dBm(scattering_power(scatter, weights=weights) * self.aperture_gain)
-            steering_power[i] = power
-            
-        steering_mesh.point_data["Power"] = steering_power
-        
+        steering_power = np.empty(steering_mesh.number_of_points)
+
+        for i, point in enumerate(steering_mesh.points):
+
+            steering_vec = point - location
+            steering_vec /= np.linalg.norm(steering_vec)
+
+            weights = WavefrontWeights(
+                array_points,
+                steering_vec,
+                self.target_wavelength,
+            )
+
+            steering_power[i] = to_dBm(
+                scattering_power(scatter, weights=weights)
+            )
+
+        steering_mesh.point_data["Power"] = steering_power - np.max(steering_power)
+
         return pv.to_meshio(steering_mesh)
         
         
@@ -142,7 +153,7 @@ class IsotropicReceiver(ReceiverArray):
         
         super().__init__(gain=1.0)
         
-        self.points = np.vstack(ArrayFactory.spherical(12, 7, 0.01))
+        self.points = np.vstack(ArrayFactory.spherical(12, 7, 0.1))
         self.structure = None
         
         self.normal_factory.apply("outward")

@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from ..utils.formatting import Symbols
 
 
 def mpl_use_latex(val : bool):
@@ -35,6 +36,7 @@ class Plot2D:
 
         self.axes = axs
         self._ax = self.axes[0, 0]
+        self._sym = Symbols()
 
     def _default_style(self):
         mpl_use_latex(True)
@@ -52,6 +54,10 @@ class Plot2D:
     @property
     def ax(self):
         return self._ax
+
+    @property
+    def sym(self):
+        return self._sym
 
     def get_ax(self, row=0, col=0):
         return self.axes[row, col]
