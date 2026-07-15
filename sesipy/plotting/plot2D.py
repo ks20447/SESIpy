@@ -74,6 +74,13 @@ class Plot2D:
         event.canvas.figure.savefig(filename, bbox_inches="tight")
 
     def show(self, filename=None):
+        
+        for ax in self.axes.flatten():
+            if self.equal_aspect:
+                ax.set_aspect("equal")
+            if self.grid:
+                ax.grid(True)
+        
         if filename is not None:
             self.fig.canvas.mpl_connect(
                 "close_event", lambda event: self._save_view(event, filename)
@@ -109,23 +116,74 @@ class Plot2D:
                 self.ax.fill(xi, yi, c=c)
             else:
                 self.ax.plot(xi, yi, c=c)
-        
-        if self.equal_aspect:
-            self.ax.set_aspect("equal")
             
         if self.grid:
             self.ax.grid(True)
             
+    def plot_line(self, points, line_style="-"):
+        
+        self.ax.plot(points[:, 0], points[:, 1], line_style)
+            
+        
+    def plot_scatter(self, points, separate=False, **kwargs):
+        
+        marker = kwargs.get("marker", "x")
+        s = kwargs.get("s", 50)
+        
+        if separate:
+            for (x, y) in points:
+                self.ax.scatter(x, y, s=s, marker=marker)
+        else:
+            self.ax.scatter(points[:, 0], points[:, 1], s=s, marker=marker)
+            
+        
+    def plot_arrows(self, points, theta, separate=False, **kwargs):
+    
+        u = np.cos(np.radians(theta))
+        v = np.sin(np.radians(theta))
+        
+        scale = kwargs.get("scale", 0.5)
+        color = kwargs.get("arrow_c", "k")
+        
+        if separate:
+            for (x, y), u, v in zip(points, u, v):
+                self.ax.quiver(
+                    x,
+                    y,
+                    u,
+                    v,
+                    angles="xy",
+                    scale_units="xy",
+                    scale=scale,
+                    color=color,
+                    width=0.005,
+                )
+        else:
+            self.ax.quiver(
+                points[:, 0],
+                points[:, 1],
+                u,
+                v,
+                angles="xy",
+                scale_units="xy",
+                scale=scale,
+                color=color,
+                width=0.005,
+            )
+            
+    def plot_waypoints(self, points, orientation, **kwargs):
+        
+        self.plot_arrows(points, orientation, **kwargs)
+        self.plot_scatter(points, marker="o", s=75, **kwargs)
+        self.plot_line(points, line_style="--")
+            
+          
     def plot_pgm(self, img):
         
         cax = self.ax.imshow(img, cmap='gray', origin='upper')
         
         self.ax.set_xlabel("X (pixels)")
         self.ax.set_ylabel("Y (pixels)")
-        self.ax.grid(False)
-        
-        if self.equal_aspect:
-            self.ax.set_aspect("equal")
             
             
     def plot_aoa(self, theta, r, title=None):
@@ -143,8 +201,5 @@ class Plot2D:
         
         if self.grid:
             self.ax.grid(True)
-        
-        if self.equal_aspect:
-            self.ax.set_aspect("equal")
         
         self.axes[row, col] = self.ax

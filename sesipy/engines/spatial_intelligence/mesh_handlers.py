@@ -171,7 +171,7 @@ class AntennaWrapper(AntennaArray):
 
     @points.setter
     def points(self, points: np.ndarray):
-        self._points = meshio.Mesh(points=points, cells=[])
+        self._points = meshio.Mesh(points=points, cells=[("vertex", np.arange(len(points)).reshape(-1, 1))])
         self._update_meshes()
         
     @property

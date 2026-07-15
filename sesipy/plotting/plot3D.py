@@ -4,9 +4,9 @@ from ..utils.formatting import Symbols
 
 class Plot3D:
 
-    def __init__(self, shape=(1, 1)):
+    def __init__(self, n_rows=1, n_cols=1):
 
-        self.pl = pv.Plotter(shape=shape)
+        self.pl = pv.Plotter(shape=(n_rows, n_cols))
         self._sym = Symbols()
         
     def set_plot(self, ind=(0, 0)):
@@ -54,6 +54,20 @@ class Plot3D:
             render_points_as_spheres=True,
             **kwargs,
         )
+        
+    def add_arrows(self, points, orientations, key="Vectors", **kwargs):
+        
+        point_data = pv.PolyData(points)
+        point_data.point_data[key] = orientations
+        
+        arrows = point_data.glyph(
+            orient=key,
+            scale=False,
+            factor=kwargs.get("scale_factor", 0.5),
+            color_mode="vector",
+        )
+        self.pl.add_mesh(arrows)
+        
 
     def show_bounds(self):
         self.pl.show_bounds()
@@ -80,6 +94,11 @@ class Plot3D:
         else:
             self.pl.show()
             
+    def plot_path(self, points, orientations, **kwargs):
+        
+        self.add_points(points, **kwargs)
+        self.add_arrows(points, orientations)
+            
     def plot_indicator_line(self, loc, line_color, **kwargs):
         line = pv.Line(
             loc - np.array([0, 0, loc[-1]]),
@@ -93,16 +112,7 @@ class Plot3D:
         )
 
     def plot_point_normals(self, points, normals, **kwargs):
-
-        point_data = pv.PolyData(points)
-        point_data.point_data["Normals"] = normals
-        arrows = point_data.glyph(
-            orient="Normals",
-            scale=False,
-            factor=kwargs.get("scale_factor", 0.5),
-            color_mode="vector",
-        )
-        self.pl.add_mesh(arrows)
+        self.add_arrows(points, normals, key="Normals", **kwargs)
 
     def plot_antenna_array(self, antenna, scalars=None, normals=False, **kwargs):
 
