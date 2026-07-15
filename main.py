@@ -24,10 +24,10 @@ def main():
     receiver.steering_points = ArrayFactory.circle(200, 0.5)
     receiver.beamform_array = ArrayFactory.circle(4, transmitter.wavelength / 4)
 
-    array_loc = np.array([5.0, 5.0, 0.5])
+    array_loc = np.array([5.0, 0.0, 0.5])
     array_rot = np.radians([0.0, 0.0, 0.0])
 
-    scene = Scene(scatter=True, cuda=True)
+    scene = Scene(scatter=False, cuda=True)
 
     scene.receiver = receiver
     scene.transmitter = transmitter
@@ -46,15 +46,11 @@ def main():
 
     steering_mesh = receiver.wave_front_steering(array_points, mean_scatter)
 
-    plotter = Plot3D()
-
-    plotter.plot_blockers(scene.blockers)
-    plotter.plot_antenna_array(transmitter)
-
-    plotter.add_points(array_points)
-    plotter.plot_indicator_line(array_loc, "red")
-    plotter.add_mesh(steering_mesh, scalars="Power")
-
+    plotter = Plot2D(1, 1)
+    plotter.plot_aoa(
+        steering_mesh.point_data["Theta"],
+        steering_mesh.point_data["Power"],
+    )
     plotter.show()
 
 

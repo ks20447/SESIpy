@@ -116,7 +116,7 @@ class Plot2D:
         if self.grid:
             self.ax.grid(True)
             
-    def plot_pgm(self, img, name=None):
+    def plot_pgm(self, img):
         
         cax = self.ax.imshow(img, cmap='gray', origin='upper')
         
@@ -126,3 +126,25 @@ class Plot2D:
         
         if self.equal_aspect:
             self.ax.set_aspect("equal")
+            
+            
+    def plot_aoa(self, theta, r, title=None):
+        
+        row, col = [(i, j) for i in range(self.axes.shape[0]) for j in range(self.axes.shape[1]) if self.axes[i, j] is self.ax][0]
+        
+        if self.ax.name != "polar":
+            spec = self.ax.get_subplotspec()
+            self.ax.remove()
+            self._ax = self.fig.add_subplot(spec, projection="polar")
+        
+        self.ax.plot(theta, r)
+        self.ax.set_xlabel(f"Theta")
+        self.ax.set_ylabel(f"Power ({self.sym.DB})")
+        
+        if self.grid:
+            self.ax.grid(True)
+        
+        if self.equal_aspect:
+            self.ax.set_aspect("equal")
+        
+        self.axes[row, col] = self.ax

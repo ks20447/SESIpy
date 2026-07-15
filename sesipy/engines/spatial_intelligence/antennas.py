@@ -131,6 +131,7 @@ class ReceiverArray(AntennaWrapper):
             )
 
         steering_mesh.point_data["Power"] = steering_power - np.max(steering_power)
+        steering_mesh.point_data["Theta"] = np.arctan2(self.steering_points[:, 1], self.steering_points[:, 0])
 
         return pv.to_meshio(steering_mesh)
         
