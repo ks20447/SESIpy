@@ -226,7 +226,7 @@ class Plot2D:
         self.ax.set_ylabel("Y (pixels)")
             
             
-    def plot_aoa(self, theta, r, title=None):
+    def plot_aoa(self, theta, r, aoa=None):
         
         row, col = [(i, j) for i in range(self.axes.shape[0]) for j in range(self.axes.shape[1]) if self.axes[i, j] is self.ax][0]
         
@@ -234,8 +234,22 @@ class Plot2D:
             spec = self.ax.get_subplotspec()
             self.ax.remove()
             self._ax = self.fig.add_subplot(spec, projection="polar")
+            
+        idx = np.argsort(theta)
+        theta = theta[idx]
+        theta = np.append(theta, theta[0])
+        r = r[idx]
+        r = np.append(r, r[0])
         
         self.ax.plot(theta, r)
+        self.ax.set_ylim([r.min(), 0.0])
+        
+        if aoa:
+            rmin, rmax = self.ax.get_ylim()
+            self.ax.plot([aoa.peak, aoa.peak], [rmin, rmax], "r-")
+            self.ax.plot([aoa.left, aoa.left], [rmin, rmax], "r--")
+            self.ax.plot([aoa.right, aoa.right], [rmin, rmax], "r--")
+        
         self.ax.set_xlabel(f"Theta")
         self.ax.set_ylabel(f"Power ({self.sym.DB})")
         
