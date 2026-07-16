@@ -78,3 +78,7 @@ def __getattr__(name):
         return getattr(module, name)
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return __all__[:]

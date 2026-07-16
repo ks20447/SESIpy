@@ -7,6 +7,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     "World",
+    "WorldBuilder",
+    "WorldDescriptor",
     "Indoor",
     "Outdoor",
     "Obstacle",
@@ -14,8 +16,22 @@ __all__ = [
 
 
 def __getattr__(name):
-    if name in {"World", "Indoor", "Outdoor", "Obstacle", "WorldBuilder", "WorldDescriptor"}:
-        from .worlds import World, Indoor, Outdoor, Obstacle, WorldBuilder, WorldDescriptor
+    if name in {
+        "World",
+        "Indoor",
+        "Outdoor",
+        "Obstacle",
+        "WorldBuilder",
+        "WorldDescriptor",
+    }:
+        from .worlds import (
+            World,
+            Indoor,
+            Outdoor,
+            Obstacle,
+            WorldBuilder,
+            WorldDescriptor,
+        )
 
         return {
             "World": World,
@@ -27,3 +43,7 @@ def __getattr__(name):
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return __all__[:]

@@ -7,8 +7,8 @@ if TYPE_CHECKING:
     from .plot3D import Plot3D
 
 __all__ = [
-    "Plot3D",
     "Plot2D",
+    "Plot3D",
 ]
 
 
@@ -24,3 +24,7 @@ def __getattr__(name):
         return Plot3D
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return __all__[:]
