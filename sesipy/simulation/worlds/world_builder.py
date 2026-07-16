@@ -1,6 +1,7 @@
 import cv2
 import math
 import yaml
+import json
 import shapely as sp
 import pyvista as pv
 from .utils import *
@@ -149,16 +150,47 @@ class WorldDescriptor:
                 obstacle.width,
                 obstacle.length,
                 height,
-                obstacle.theta
+                obstacle.theta,
             ]
             self.generator["fixed_obstacles"].append(obstacle_data)
 
-    def write_to_yaml(self):
-        return
+    def write_to_yaml(self, filename):
+        with open(filename, "w") as f:
+            yaml.safe_dump(
+                self._to_builtin(self.get_data()),
+                f,
+                sort_keys=False,
+                default_flow_style=False,
+            )
+            
+    def write_to_json(self, filename, indent=4):
+        with open(filename, "w") as f:
+            json.dump(
+                self._to_builtin(self.get_data()),
+                f,
+                indent=indent,
+            )
 
     def get_data(self):
         self.meta_data["generator"] = self.generator
         return self.meta_data
+    
+    
+    def _to_builtin(self, obj):
+        if isinstance(obj, dict):
+            return {k: self._to_builtin(v) for k, v in obj.items()}
+
+        if isinstance(obj, (list, tuple)):
+            return [self._to_builtin(v) for v in obj]
+
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+
+        if isinstance(obj, np.generic):
+            return obj.item()
+
+        return obj
+
 
 
 class World:
