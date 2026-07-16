@@ -1,10 +1,165 @@
 import cv2
+import math
 import yaml
 import shapely as sp
 import pyvista as pv
 from .utils import *
 from shapely import wkb
 from pathlib import Path
+from dataclasses import dataclass
+
+
+@dataclass(slots=True)
+class Wall:
+    x: float
+    y: float
+    width: float
+    theta: float
+
+
+@dataclass(slots=True)
+class Rectangle:
+    x: float
+    y: float
+    width: float
+    length: float
+    theta: float
+
+
+class WorldDescriptor:
+
+    def __init__(self, floor, roof, walls, boundary_z):
+
+        self.floor = floor
+        self.roof = roof
+        self.walls = walls
+        self.boundary_z = boundary_z
+
+        self.generator = {
+            "type": "fixed",
+            "fixed_obstacles": [],
+            "random_obstacles": {
+                "small": 0,
+                "medium": 0,
+                "large": 0,
+                "ranges": {
+                    "small": [0, 0],
+                    "medium": [0, 0],
+                    "large": [0, 0],
+                },
+            },
+        }
+
+        self.meta_data = {
+            "floor": self.floor,
+            "roof": self.roof,
+            "walls": self.walls,
+            "boundary_z": self.boundary_z,
+            "bound": {},
+        }
+
+    def _extract_walls(self, exterior):
+
+        walls = []
+
+        for p1, p2 in zip(exterior[:-1], exterior[1:]):
+            dx = p2[0] - p1[0]
+            dy = p2[1] - p1[1]
+
+            walls.append(
+                Wall(
+                    x=(p1[0] + p2[0]) / 2,
+                    y=(p1[1] + p2[1]) / 2,
+                    width=math.hypot(dx, dy),
+                    theta=math.atan2(dy, dx),
+                )
+            )
+
+        return walls
+
+    def _extract_rectangle_obstacles(self, interiors):
+
+        rectangles = []
+
+        for interior in interiors:
+            hole = sp.Polygon(interior)
+            rect = hole.minimum_rotated_rectangle
+
+            pts = np.asarray(rect.exterior.coords[:-1])
+
+            edges = np.roll(pts, -1, axis=0) - pts
+            lengths = np.linalg.norm(edges, axis=1)
+
+            unique = np.unique(np.round(lengths, 12))
+            width = unique.min()
+            length = unique.max()
+
+            long_edge = edges[np.argmax(lengths)]
+            theta = math.atan2(long_edge[1], long_edge[0])
+
+            center = pts.mean(axis=0)
+
+            rectangles.append(
+                Rectangle(
+                    x=center[0],
+                    y=center[1],
+                    width=width,
+                    length=length,
+                    theta=theta,
+                )
+            )
+
+        return rectangles
+
+    def build_from_polygon(self, polygon: sp.Polygon, obstacle_heights: list):
+
+        minx, miny, maxx, maxy = polygon.bounds
+
+        self.meta_data["bound"]["xmin"] = float(minx)
+        self.meta_data["bound"]["xmax"] = float(maxx)
+        self.meta_data["bound"]["ymin"] = float(miny)
+        self.meta_data["bound"]["ymax"] = float(maxy)
+
+        walls = (
+            self._extract_walls(np.asarray(polygon.exterior.coords))
+            if not self.walls
+            else []
+        )
+        obstacles = self._extract_rectangle_obstacles(polygon.interiors)
+
+        for wall in walls:
+
+            wall_data = [
+                wall.x,
+                wall.y,
+                self.boundary_z / 2,
+                wall.width,
+                0.0,
+                self.boundary_z,
+                np.rad2deg(wall.theta),
+            ]
+            self.generator["fixed_obstacles"].append(wall_data)
+
+        for obstacle, height in zip(obstacles, obstacle_heights):
+
+            obstacle_data = [
+                obstacle.x,
+                obstacle.y,
+                height / 2,
+                obstacle.width,
+                obstacle.length,
+                height,
+                obstacle.theta
+            ]
+            self.generator["fixed_obstacles"].append(obstacle_data)
+
+    def write_to_yaml(self):
+        return
+
+    def get_data(self):
+        self.meta_data["generator"] = self.generator
+        return self.meta_data
+
 
 class World:
 
@@ -18,7 +173,7 @@ class World:
         self._floor_plan = polygon
         self._scatterers = scatterers
         self._blockers = blockers
-        
+
         self._pgm = None
         self._pgm_params = {}
 
@@ -28,7 +183,7 @@ class World:
     @property
     def floor_plan(self):
         return self._floor_plan
-    
+
     @property
     def pgm(self):
         return self._pgm
@@ -148,9 +303,9 @@ class World:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         meshio.write(path, self.blocker_mesh, file_format=file_format)
-        
+
     def save_map(self, filename):
-        
+
         path = Path(filename)
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -160,7 +315,11 @@ class World:
             "image": f"{path}.pgm",
             "mode": "trinary",
             "resolution": float(self._pgm_params["res"]),
-            "origin": [float(self._pgm_params["minx"]), float(self._pgm_params["miny"]), 0.0],
+            "origin": [
+                float(self._pgm_params["minx"]),
+                float(self._pgm_params["miny"]),
+                0.0,
+            ],
             "negate": 0,
             "occupied_thresh": 0.65,
             "free_thresh": 0.196,
@@ -176,7 +335,16 @@ class WorldBuilder(World):
 
         self.params = params
 
-        self.x, self.y = self.params["bound"]["x"], self.params["bound"]["y"]
+        bound = self.params["bound"]
+        self.xmin = float(bound["xmin"])
+        self.xmax = float(bound["xmax"])
+        self.ymin = float(bound["ymin"])
+        self.ymax = float(bound["ymax"])
+        self.x = float(self.xmax - self.xmin)
+        self.y = float(self.ymax - self.ymin)
+        self.cx = float((self.xmin + self.xmax) / 2.0)
+        self.cy = float((self.ymin + self.ymax) / 2.0)
+
         self.floor = self.params["floor"]
         self.roof = self.params["roof"]
         self.walls = self.params["walls"]
@@ -244,8 +412,8 @@ class WorldBuilder(World):
 
             out.append(
                 Obstacle(
-                    x=np.random.uniform(-self.x / 2 + width, self.x / 2 - width),
-                    y=np.random.uniform(-self.y / 2 + depth, self.y / 2 - depth),
+                    x=np.random.uniform(self.xmin + width / 2, self.xmax - width / 2),
+                    y=np.random.uniform(self.ymin + depth / 2, self.ymax - depth / 2),
                     z=height / 2,
                     width=width,
                     depth=depth,
@@ -264,8 +432,8 @@ class WorldBuilder(World):
         if self.floor:
             specs.append(
                 {
-                    "x": 0,
-                    "y": 0,
+                    "x": self.cx,
+                    "y": self.cy,
                     "z": 0,
                     "length": x,
                     "width": y,
@@ -276,8 +444,8 @@ class WorldBuilder(World):
         if self.roof:
             specs.append(
                 {
-                    "x": 0,
-                    "y": 0,
+                    "x": self.cx,
+                    "y": self.cy,
                     "z": z,
                     "length": x,
                     "width": y,
@@ -289,8 +457,8 @@ class WorldBuilder(World):
             specs.extend(
                 [
                     {
-                        "x": 0,
-                        "y": y / 2,
+                        "x": self.cx,
+                        "y": self.ymax,
                         "z": z / 2,
                         "length": x,
                         "width": z,
@@ -298,8 +466,8 @@ class WorldBuilder(World):
                         "flip_normals": True,
                     },
                     {
-                        "x": 0,
-                        "y": -y / 2,
+                        "x": self.cx,
+                        "y": self.ymin,
                         "z": z / 2,
                         "length": x,
                         "width": z,
@@ -307,8 +475,8 @@ class WorldBuilder(World):
                         "flip_normals": False,
                     },
                     {
-                        "x": -x / 2,
-                        "y": 0,
+                        "x": self.xmin,
+                        "y": self.cy,
                         "z": z / 2,
                         "length": y,
                         "width": z,
@@ -316,8 +484,8 @@ class WorldBuilder(World):
                         "flip_normals": True,
                     },
                     {
-                        "x": x / 2,
-                        "y": 0,
+                        "x": self.xmax,
+                        "y": self.cy,
                         "z": z / 2,
                         "length": y,
                         "width": z,
@@ -335,7 +503,12 @@ class WorldBuilder(World):
     def create_floor_plan(self):
         x, y = self.x, self.y
 
-        shell = [(-x / 2, -y / 2), (x / 2, -y / 2), (x / 2, y / 2), (-x / 2, y / 2)]
+        shell = [
+            (self.xmin, self.ymin),
+            (self.xmax, self.ymin),
+            (self.xmax, self.ymax),
+            (self.xmin, self.ymax),
+        ]
 
         holes = []
         for obstacle in self.obstacles:
@@ -430,9 +603,9 @@ class WorldBuilder(World):
         )
 
         return scatterers
-    
+
     def create_pgm(self, boundary=True):
-        
+
         resolution = 0.05
         padding = 1.0
 
@@ -464,11 +637,6 @@ class WorldBuilder(World):
 
         if boundary:
             cv2.polylines(img, ext_pts, isClosed=True, color=0, thickness=1)
-            
-        self._pgm = img
-        self._pgm_params = {
-            "res" : resolution,
-            "minx" : minx,
-            "miny" : miny
-        }
 
+        self._pgm = img
+        self._pgm_params = {"res": resolution, "minx": minx, "miny": miny}

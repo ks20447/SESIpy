@@ -3,8 +3,10 @@ roof: false
 walls: false
 boundary_z: null
 bound:
-  x: 50.0
-  y: 50.0
+  xmin: -25.0
+  xmax: 25.0
+  ymin: -25.0
+  ymax: 25.0
 generator:
   type: "random"
   fixed_obstacles: []
