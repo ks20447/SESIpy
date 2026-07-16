@@ -9,8 +9,8 @@ class Plot3D:
         self.pl = pv.Plotter(shape=(n_rows, n_cols))
         self._sym = Symbols()
         
-    def set_plot(self, ind=(0, 0)):
-        self.pl.subplot(*ind)
+    def set_plot(self, row, col):
+        self.pl.subplot(row, col)
         
     def set_subplot_ratios(self, row_ratios=None, col_ratios=None):
         nrows, ncols = self.pl.shape

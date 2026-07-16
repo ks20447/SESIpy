@@ -3,6 +3,7 @@ from sesipy.simulation import Indoor
 from sesipy.plotting import Plot2D, Plot3D
 from sesipy.utils import ArrayFactory
 from sesipy.engines.spatial_intelligence import extract_aoa, aoa_projection_2D
+from sesipy.engines.mapping.environment import Sampler2D
 from sesipy.engines import (
     PointSource,
     IsotropicReceiver,
@@ -49,7 +50,12 @@ def main():
 
     aoa = extract_aoa(steering_mesh, drop_dB=1.0)
     fov = aoa_projection_2D(array_loc[0:2], aoa, length=100)
-    fov_intersect = env.polygon_intersect_2D(fov)
+    fov_intersect = env.env2D.polygon_intersect_2D(fov)
+
+    fov_sampler = Sampler2D(fov_intersect)
+    samples, _ = fov_sampler.circular_path_2D(
+        array_loc[0:2], (10.0, 0.0), 25.0, 10, right=True
+    )
 
     plotter = Plot2D(1, 2)
     plotter.set_ax(0, 0)
@@ -63,6 +69,7 @@ def main():
     plotter.set_ax(0, 0)
     plotter.plot_polygon(world_indoor.floor_plan, fill_holes=True)
     plotter.plot_scatter([transmitter.points_mesh.center[0:2]], separate=True, c="r")
+    plotter.plot_scatter(samples[:, 0:2], c="g", s=10, marker="o")
 
     plotter.show()
 
