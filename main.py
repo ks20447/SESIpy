@@ -52,7 +52,6 @@ def main():
     fov_intersect = env.polygon_intersect_2D(fov)
 
     plotter = Plot2D(1, 2)
-    
     plotter.set_ax(0, 0)
     plotter.plot_fov(array_loc[0:2], fov_intersect)
 

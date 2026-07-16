@@ -1,6 +1,7 @@
-from dataclasses import dataclass
 import numpy as np
 import shapely as sp
+from scipy.signal import find_peaks
+from dataclasses import dataclass
 
 
 def angle_diff(a, b):
@@ -12,6 +13,8 @@ class AoA:
     peak: float | None
     left: float | None
     right: float | None
+    theta_peaks: np.ndarray
+    power_peaks: np.ndarray
 
     @property
     def left_beam(self):
@@ -30,6 +33,17 @@ class AoA:
         if self.left is None or self.right is None:
             return None
         return angle_diff(self.left, self.right)
+    
+    @property
+    def n_peaks(self):
+        return len(self.theta_peaks)
+    
+    @property
+    def beam_center(self):
+        if self.left is None or self.right is None:
+            return None
+
+        return (self.left + 0.5 * angle_diff(self.left, self.right)) % (2 * np.pi)
 
 
 def aoa_projection_2D(origin, aoa: AoA, length, arc_resolution=32):
@@ -105,9 +119,18 @@ def extract_aoa(steering_mesh, drop_dB=3.0):
             return None
 
         i = j
+        
+    peak_idxs, _ = find_peaks(
+        power,
+        height=-3.0,
+    )
 
     return AoA(
         peak=peak,
         left=left,
         right=right,
+        theta_peaks=theta[peak_idxs],
+        power_peaks=power[peak_idxs]
     )
+    
+    

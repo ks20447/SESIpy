@@ -242,13 +242,15 @@ class Plot2D:
         r = np.append(r, r[0])
         
         self.ax.plot(theta, r)
-        self.ax.set_ylim([r.min(), 0.0])
+        self.ax.set_ylim([r.min(), 0.1])
         
         if aoa:
             rmin, rmax = self.ax.get_ylim()
             self.ax.plot([aoa.peak, aoa.peak], [rmin, rmax], "r-")
             self.ax.plot([aoa.left, aoa.left], [rmin, rmax], "r--")
             self.ax.plot([aoa.right, aoa.right], [rmin, rmax], "r--")
+            
+            self.ax.scatter(aoa.theta_peaks, aoa.power_peaks, marker="o", c="g", zorder=10)
         
         self.ax.set_xlabel(f"Theta")
         self.ax.set_ylabel(f"Power ({self.sym.DB})")
