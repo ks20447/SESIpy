@@ -19,6 +19,8 @@ if TYPE_CHECKING:
         threshold_point_data,
         create_mesh_copies,
         Environment,
+        Sampler2D,
+        Sampler3D,
     )
 
 __all__ = [
@@ -45,6 +47,8 @@ __all__ = [
     "threshold_point_data",
     "create_mesh_copies",
     "Environment",
+    "Sampler2D",
+    "Sampler3D",
 ]
 
 
@@ -73,6 +77,8 @@ def __getattr__(name):
         "threshold_point_data",
         "create_mesh_copies",
         "Environment",
+        "Sampler2D",
+        "Sampler3D",
     }:
         module = import_module(".engines", __name__)
         return getattr(module, name)

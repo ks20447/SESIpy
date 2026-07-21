@@ -15,7 +15,7 @@ if TYPE_CHECKING:
         threshold_point_data,
         create_mesh_copies,
     )
-    from .mapping import Environment
+    from .mapping import Environment, Sampler2D, Sampler3D
 
 __all__ = [
     "PointSource",
@@ -29,6 +29,8 @@ __all__ = [
     "threshold_point_data",
     "create_mesh_copies",
     "Environment",
+    "Sampler2D",
+    "Sampler3D",
 ]
 
 
@@ -71,10 +73,14 @@ def __getattr__(name):
             "create_mesh_copies": create_mesh_copies,
         }[name]
 
-    if name == "Environment":
-        from .mapping import Environment
+    if name in {"Environment", "Sampler2D", "Sampler3D"}:
+        from .mapping import Environment, Sampler2D, Sampler3D
 
-        return Environment
+        return {
+            "Environment": Environment,
+            "Sampler2D": Sampler2D,
+            "Sampler3D": Sampler3D,
+        }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 

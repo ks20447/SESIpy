@@ -74,6 +74,15 @@ def aoa_projection_2D(origin, aoa: AoA, length, arc_resolution=32):
             )
         )
     )
+    
+
+def multi_aoa_projection_2D(origin, aoa : AoA, width, length, arc_resolution=32):
+    
+    aoa_list = [AoA(p, p - width, p + width, [], []) for p in aoa.theta_peaks]
+    
+    projections = [aoa_projection_2D(origin, a, length, arc_resolution) for a in aoa_list]
+    
+    return sp.MultiPolygon(projections)
 
 
 def extract_aoa(steering_mesh, drop_dB=3.0):
