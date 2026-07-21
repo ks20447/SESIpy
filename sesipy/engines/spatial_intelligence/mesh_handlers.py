@@ -1,6 +1,8 @@
 import meshio
 import numpy as np
 import pyvista as pv
+from functools import wraps
+from uuid import uuid4
 from lyceanem.base_classes import (
     points,
     structures,
@@ -8,6 +10,14 @@ from lyceanem.base_classes import (
 )
 from .utils import translate, rotate
 from ...utils import NormalFactory
+
+def update_id(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        result = func(self, *args, **kwargs)
+        self.id = uuid4().hex
+        return result
+    return wrapper
 
 class LyceanObject:
 
@@ -88,6 +98,8 @@ class AntennaArray:
         self.structure_mesh = None
         self._aperture = None
         self._normal_factory = None
+        
+        self.id = uuid4().hex
 
     @property
     def aperture(self):
@@ -115,6 +127,7 @@ class AntennaArray:
             aperture_points,
         )
 
+    @update_id
     def _foreach_mesh(self, func, *args):
         func(self.points_mesh, *args)
 
@@ -133,9 +146,11 @@ class AntennaArray:
     def translate_to(self, coord):
         self._foreach_mesh(LyceanObject.translate_to, coord)
 
+    @update_id
     def set_point_normals(self, normals):
         self.points_mesh.set_normals(normals)
         
+    @update_id
     def set_point_data(self, key, data):
         self.points_mesh.meshio_mesh.point_data[key] = data
 
@@ -146,10 +161,10 @@ class AntennaWrapper(AntennaArray):
 
         self._points = None
         self._structure = None
+        
+        super().__init__()
 
-        self.points_mesh = None
-        self.structure_mesh = None
-
+    @update_id
     def _update_meshes(self):
 
         if self._points is None:
@@ -192,6 +207,7 @@ class AntennaWrapper(AntennaArray):
         return self.points_mesh.get_normals()
 
     @point_normals.setter
+    @update_id
     def point_normals(self, normals):
         self.points_mesh.set_normals(normals)
 
@@ -200,6 +216,7 @@ class AntennaWrapper(AntennaArray):
         return self.points_mesh.get_area()
 
     @point_area.setter
+    @update_id
     def point_area(self, area):
         self.points_mesh.set_area(area)
         

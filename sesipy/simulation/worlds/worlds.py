@@ -14,6 +14,7 @@ class Indoor(WorldBuilder):
 
         super().__init__(params=params, scatter_resolution=scatter_resolution)
         
+        self.name = "Indoor"
         self.create_pgm()
 
 
@@ -28,4 +29,5 @@ class Outdoor(WorldBuilder):
 
         super().__init__(params=params, scatter_resolution=scatter_resolution)
         
+        self.name = "Outdoor"
         self.create_pgm()

@@ -211,6 +211,16 @@ class World:
 
         self._combined_scatter_mesh = self.combine_meshes(self.scatterers)
         self._combined_blocker_mesh = self.combine_meshes(self.blockers)
+        
+        self._name = ""
+        
+    @property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, val : str):
+        self._name = val
 
     @property
     def floor_plan(self):
