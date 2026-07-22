@@ -132,7 +132,11 @@ def extract_aoa(steering_mesh, drop_dB=3.0):
     peak_idxs, _ = find_peaks(
         power,
         height=-3.0,
+        width=1,
     )
+    
+    if len(peak_idxs) == 0:
+        peak_idxs = np.array([peak_idx])
 
     return AoA(
         peak=peak,

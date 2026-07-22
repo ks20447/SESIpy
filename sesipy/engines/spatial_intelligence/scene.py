@@ -119,8 +119,7 @@ class Scene:
             )
 
         return np.array([Ex[0][1::]]), np.array([Ey[0][1::]]), np.array([Ez[0][1::]])
-    
-    
+
     def calculate_scene_los(self, chunks=1):
 
         self.set_scene()
@@ -145,15 +144,17 @@ class Scene:
             )
 
         return Ex, Ey, Ez
-    
+
     def sample_receiver_scattering(self, locations, orientations):
 
         sample_scatter = []
-        sample_meshes = create_mesh_copies(self.receiver.points_mesh.meshio_mesh, locations, orientations)
+        sample_meshes = create_mesh_copies(
+            self.receiver.points_mesh.meshio_mesh, locations, orientations
+        )
 
         for vec, rot in tqdm(
             zip(locations, orientations),
-            desc="Processing Sample Points: Scatter",
+            desc="Processing Receiver Sample Points: Scatter",
             total=len(locations),
             file=sys.stderr,
             dynamic_ncols=True,
@@ -165,21 +166,21 @@ class Scene:
 
             scatter = self.calculate_receiver_scattering()
             sample_scatter.append(scatter)
-            
+
             self.receiver.rotate(-rot, center=self.receiver.points_mesh.center)
-            
 
         return sample_scatter, sample_meshes
-    
-    
+
     def sample_transmitter_los(self, locations, orientations):
 
         sample_los = []
-        sample_meshes = create_mesh_copies(self.transmitter.points_mesh.meshio_mesh, locations, orientations)
+        sample_meshes = create_mesh_copies(
+            self.transmitter.points_mesh.meshio_mesh, locations, orientations
+        )
 
         for vec, rot in tqdm(
             zip(locations, orientations),
-            desc="Processing Sample Points: LOS",
+            desc="Processing Transmitter Sample Points: LOS",
             total=len(locations),
             file=sys.stderr,
             dynamic_ncols=True,
@@ -195,3 +196,65 @@ class Scene:
             self.transmitter.rotate(-rot, center=self.transmitter.points_mesh.center)
 
         return sample_los, sample_meshes
+
+    def sample_transmitter_scattering(self, locations, orientations):
+
+        sample_scatter = []
+        sample_meshes = create_mesh_copies(
+            self.transmitter.points_mesh.meshio_mesh, locations, orientations
+        )
+
+        for vec, rot in tqdm(
+            zip(locations, orientations),
+            desc="Processing Transmitter Sample Points: Scatter",
+            total=len(locations),
+            file=sys.stderr,
+            dynamic_ncols=True,
+            disable=False,
+        ):
+
+            self.transmitter.translate_to(vec)
+            self.transmitter.rotate(rot, center=self.transmitter.points_mesh.center)
+
+            scatter = self.calculate_receiver_scattering()
+            sample_scatter.append(scatter)
+
+            self.transmitter.rotate(-rot, center=self.transmitter.points_mesh.center)
+
+        return sample_scatter, sample_meshes
+
+    def sample_transmitter_and_receiver_scattering(
+        self, t_locs, t_orients, r_locs, r_orients,
+    ):
+        
+        n_t = len(t_locs)
+        t_meshes = create_mesh_copies(
+            self.transmitter.points_mesh.meshio_mesh, t_locs, t_orients
+        )
+        
+        sample_scatter = {f"t_{n}" : None for n in range(n_t)}
+        sample_meshes = {f"t_{n}" : {"t_mesh" : mesh} for n, mesh in enumerate(t_meshes)}
+
+        for t_vec, t_rot, n in tqdm(
+            zip(t_locs, t_orients, range(n_t)),
+            desc="Processing Transmitter Sample Points: Scatter",
+            total=n_t,
+            file=sys.stderr,
+            dynamic_ncols=True,
+            disable=False,
+        ):
+
+            self.transmitter.translate_to(t_vec)
+            self.transmitter.rotate(t_rot, center=self.transmitter.points_mesh.center)
+            
+            scatter, r_meshes = self.sample_receiver_scattering(r_locs, r_orients)
+                
+            sample_scatter[f"t_{n}"] = scatter
+            sample_meshes[f"t_{n}"]["r_meshes"] = r_meshes
+            
+            self.transmitter.rotate(-t_rot, center=self.transmitter.points_mesh.center)
+            
+            
+        return sample_scatter, sample_meshes
+                
+                

@@ -150,11 +150,11 @@ class PointSource(TransmitterArray):
         
 class IsotropicReceiver(ReceiverArray):
     
-    def __init__(self):
+    def __init__(self, n_az=12, n_el=7):
         
         super().__init__(gain=1.0)
         
-        self.points = np.vstack(ArrayFactory.spherical(12, 7, 0.1))
+        self.points = np.vstack(ArrayFactory.spherical(n_az, n_el, 0.01))
         self.structure = None
         
         self.normal_factory.apply("outward")
