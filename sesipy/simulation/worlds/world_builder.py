@@ -162,7 +162,7 @@ class WorldDescriptor:
                 sort_keys=False,
                 default_flow_style=False,
             )
-            
+
     def write_to_json(self, filename, indent=4):
         with open(filename, "w") as f:
             json.dump(
@@ -174,8 +174,7 @@ class WorldDescriptor:
     def get_data(self):
         self.meta_data["generator"] = self.generator
         return self.meta_data
-    
-    
+
     def _to_builtin(self, obj):
         if isinstance(obj, dict):
             return {k: self._to_builtin(v) for k, v in obj.items()}
@@ -190,7 +189,6 @@ class WorldDescriptor:
             return obj.item()
 
         return obj
-
 
 
 class World:
@@ -211,15 +209,15 @@ class World:
 
         self._combined_scatter_mesh = self.combine_meshes(self.scatterers)
         self._combined_blocker_mesh = self.combine_meshes(self.blockers)
-        
+
         self._name = ""
-        
+
     @property
     def name(self):
         return self._name
-    
+
     @name.setter
-    def name(self, val : str):
+    def name(self, val: str):
         self._name = val
 
     @property
@@ -402,6 +400,10 @@ class WorldBuilder(World):
             self.obstacles = self.random_obstacles(
                 self.params["generator"]["random_obstacles"]
             )
+        elif generator == "mixed":
+            self.obstacles = self.fixed_obstacles(
+                self.params["generator"]["fixed_obstacles"]
+            ) + self.random_obstacles(self.params["generator"]["random_obstacles"])
         else:
             self.obstacles = []
 
