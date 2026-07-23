@@ -6,6 +6,7 @@ from sesipy.engines.mapping import (
     simulate_lidar,
     clean_lidar,
     extract_lidar_metadata,
+    mesh_error,
 )
 from sesipy.simulation.worlds import Indoor, WorldBuilder, WorldDescriptor
 from sesipy.plotting import Plot2D, Plot3D
@@ -43,7 +44,12 @@ def main():
     )
 
     lidar = clean_lidar(scan_points)
-    meta = extract_lidar_metadata(lidar, eps=0.2)
+    meta = extract_lidar_metadata(
+        lidar,
+        eps=0.5,
+        min_samples=5,
+        normal_radius=0.5,
+    )
 
     holes = [ob["footprint"].exterior.coords for ob in meta["objects"]]
     world_polygon = sp.Polygon(meta["boundary"].exterior.coords, holes=holes)
@@ -56,6 +62,8 @@ def main():
     )
 
     world = WorldBuilder(recreate_world.get_data())
+
+    print(mesh_error(world.blocker_mesh, indoor_world.blocker_mesh))
 
     plotter = Plot3D()
     plotter.plot_blockers(world.scatterers, color_b="r")

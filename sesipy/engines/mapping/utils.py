@@ -3,6 +3,7 @@ import cv2
 import vtk
 import yaml
 import numpy as np
+import open3d as o3d
 import pyvista as pv
 from shapely import Point, Polygon, MultiPoint, LineString
 from scipy.spatial import cKDTree
@@ -12,7 +13,6 @@ from scipy.spatial import ConvexHull
 from sklearn.cluster import DBSCAN
 from sklearn.linear_model import RANSACRegressor
 from shapely.prepared import prep
-
 
 
 def simulate_lidar(
@@ -197,7 +197,17 @@ def clean_lidar(
     return points
 
 
-def extract_lidar_metadata(points, floor_z_tol=0.1, roof_z_tol=0.1, boundary_tol=0.2, eps=0.3, min_samples=10):
+def extract_lidar_metadata(
+    points,
+    floor_z_tol=0.1,
+    roof_z_tol=0.1,
+    boundary_tol=0.2,
+    eps=0.5,
+    min_samples=10,
+    normal_weight=0.5,
+    normal_radius=0.3,
+    normal_max_nn=30
+):
     points = np.asarray(points)
     
     floor_height = float(np.percentile(points[:, 2], 1))
@@ -229,8 +239,21 @@ def extract_lidar_metadata(points, floor_z_tol=0.1, roof_z_tol=0.1, boundary_tol
     interior_points = middle_points[interior_mask]
     
     objects = []
+    
     if len(interior_points) > 0:
-        clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(interior_points[:, :2])
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(interior_points)
+        pcd.estimate_normals(
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(
+                radius=normal_radius, max_nn=normal_max_nn
+            )
+        )
+        pcd.orient_normals_towards_camera_location(np.array([0.0, 0.0, 0.0]))
+        normals = np.asarray(pcd.normals)
+        
+        features = np.hstack((interior_points[:, :2], normals * normal_weight))
+        
+        clustering = DBSCAN(eps=eps, min_samples=min_samples).fit(features)
         labels = clustering.labels_
         
         for label in set(labels):
@@ -277,20 +300,52 @@ def extract_lidar_metadata(points, floor_z_tol=0.1, roof_z_tol=0.1, boundary_tol
                             (z_min + z_max) / 2,
                         ]
                     ),
-                    "width": width,
-                    "length": length,
+                    "width": float(width),
+                    "length": float(length),
                     "height": float(z_max - z_min),
-                    "theta": theta,
+                    "theta": float(theta),
                     "footprint": footprint,
                     "points": pts,
                 }
             )
 
     return {
-        "floor_height": floor_height,
-        "roof_height": roof_height,
+        "floor_height": float(floor_height),
+        "roof_height": float(roof_height),
         "boundary": boundary,
         "objects": objects,
+    }
+    
+
+
+def mesh_error(
+    mesh_a,
+    mesh_b,
+    sample_points=None,
+):
+    if sample_points is not None:
+        pts_a = mesh_a.sample_points_uniform(sample_points).points
+        pts_b = mesh_b.sample_points_uniform(sample_points).points
+    else:
+        pts_a = mesh_a.points
+        pts_b = mesh_b.points
+
+    tree_a = cKDTree(pts_a)
+    tree_b = cKDTree(pts_b)
+
+    dist_a_to_b, _ = tree_b.query(pts_a)
+    dist_b_to_a, _ = tree_a.query(pts_b)
+
+    distances = np.concatenate([dist_a_to_b, dist_b_to_a])
+
+    return {
+        "mean": np.mean(distances),
+        "rmse": np.sqrt(np.mean(distances**2)),
+        "max": np.max(distances),
+        "std": np.std(distances),
+        "hausdorff": max(np.max(dist_a_to_b), np.max(dist_b_to_a)),
+        "distances_a_to_b": dist_a_to_b,
+        "distances_b_to_a": dist_b_to_a,
     }
 
 
