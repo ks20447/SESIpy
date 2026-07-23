@@ -14,8 +14,21 @@ if TYPE_CHECKING:
         smooth_point_data,
         threshold_point_data,
         create_mesh_copies,
+        AoA,
+        extract_aoa,
+        aoa_projection_2D,
+        multi_aoa_projection_2D,
     )
-    from .mapping import Environment, Sampler2D, Sampler3D
+    from .mapping import (
+        Environment,
+        Sampler2D,
+        Sampler3D,
+        clean_lidar,
+        extract_lidar_metadata,
+        map_yaml_to_polygon,
+        mesh_error,
+        simulate_lidar,
+    )
 
 __all__ = [
     "PointSource",
@@ -28,9 +41,18 @@ __all__ = [
     "smooth_point_data",
     "threshold_point_data",
     "create_mesh_copies",
+    "AoA",
+    "extract_aoa",
+    "aoa_projection_2D",
+    "multi_aoa_projection_2D",
     "Environment",
     "Sampler2D",
     "Sampler3D",
+    "map_yaml_to_polygon",
+    "simulate_lidar",
+    "clean_lidar",
+    "extract_lidar_metadata",
+    "mesh_error",
 ]
 
 
@@ -46,6 +68,10 @@ def __getattr__(name):
         "smooth_point_data",
         "threshold_point_data",
         "create_mesh_copies",
+        "AoA",
+        "extract_aoa",
+        "aoa_projection_2D",
+        "multi_aoa_projection_2D",
     }:
         from .spatial_intelligence import (
             PointSource,
@@ -58,6 +84,10 @@ def __getattr__(name):
             smooth_point_data,
             threshold_point_data,
             create_mesh_copies,
+            AoA,
+            extract_aoa,
+            aoa_projection_2D,
+            multi_aoa_projection_2D,
         )
 
         return {
@@ -71,15 +101,42 @@ def __getattr__(name):
             "smooth_point_data": smooth_point_data,
             "threshold_point_data": threshold_point_data,
             "create_mesh_copies": create_mesh_copies,
+            "AoA": AoA,
+            "extract_aoa": extract_aoa,
+            "aoa_projection_2D": aoa_projection_2D,
+            "multi_aoa_projection_2D": multi_aoa_projection_2D,
         }[name]
 
-    if name in {"Environment", "Sampler2D", "Sampler3D"}:
-        from .mapping import Environment, Sampler2D, Sampler3D
+    if name in {
+        "Environment",
+        "Sampler2D",
+        "Sampler3D",
+        "map_yaml_to_polygon",
+        "simulate_lidar",
+        "clean_lidar",
+        "extract_lidar_metadata",
+        "mesh_error",
+    }:
+        from .mapping import (
+            Environment,
+            Sampler2D,
+            Sampler3D,
+            clean_lidar,
+            extract_lidar_metadata,
+            map_yaml_to_polygon,
+            mesh_error,
+            simulate_lidar,
+        )
 
         return {
             "Environment": Environment,
             "Sampler2D": Sampler2D,
             "Sampler3D": Sampler3D,
+            "map_yaml_to_polygon": map_yaml_to_polygon,
+            "simulate_lidar": simulate_lidar,
+            "clean_lidar": clean_lidar,
+            "extract_lidar_metadata": extract_lidar_metadata,
+            "mesh_error": mesh_error,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

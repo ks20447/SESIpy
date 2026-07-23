@@ -3,7 +3,16 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .worlds import World, Indoor, Outdoor, Obstacle, WorldBuilder, WorldDescriptor
+    from .worlds import (
+        Indoor,
+        Obstacle,
+        Outdoor,
+        Rectangle,
+        Wall,
+        World,
+        WorldBuilder,
+        WorldDescriptor,
+    )
 
 __all__ = [
     "World",
@@ -12,6 +21,8 @@ __all__ = [
     "Indoor",
     "Outdoor",
     "Obstacle",
+    "Wall",
+    "Rectangle",
 ]
 
 
@@ -23,6 +34,8 @@ def __getattr__(name):
         "Obstacle",
         "WorldBuilder",
         "WorldDescriptor",
+        "Wall",
+        "Rectangle",
     }:
         from .worlds import (
             World,
@@ -31,6 +44,8 @@ def __getattr__(name):
             Obstacle,
             WorldBuilder,
             WorldDescriptor,
+            Wall,
+            Rectangle,
         )
 
         return {
@@ -40,6 +55,8 @@ def __getattr__(name):
             "Obstacle": Obstacle,
             "WorldBuilder": WorldBuilder,
             "WorldDescriptor": WorldDescriptor,
+            "Wall": Wall,
+            "Rectangle": Rectangle,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

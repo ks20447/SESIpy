@@ -3,8 +3,8 @@ import cv2
 import vtk
 import yaml
 import numpy as np
-import open3d as o3d
 import pyvista as pv
+from open3d import geometry, utility
 from shapely import Point, Polygon, MultiPoint, LineString
 from scipy.spatial import cKDTree
 from scipy.sparse.csgraph import connected_components
@@ -241,10 +241,10 @@ def extract_lidar_metadata(
     objects = []
     
     if len(interior_points) > 0:
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(interior_points)
+        pcd = geometry.PointCloud()
+        pcd.points = utility.Vector3dVector(interior_points)
         pcd.estimate_normals(
-            search_param=o3d.geometry.KDTreeSearchParamHybrid(
+            search_param=geometry.KDTreeSearchParamHybrid(
                 radius=normal_radius, max_nn=normal_max_nn
             )
         )
