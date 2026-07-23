@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .utils import ArrayFactory, NormalFactory, Symbols, suppress_c_output
-    from .data_storage import Database, DatabaseAoA, DatabasePS, decode, encode
+    from .data_storage import DatabaseReader, Database, DatabaseAoA, DatabasePS, decode, encode
     from .simulation import (
         World,
         Indoor,
@@ -56,6 +56,7 @@ __all__ = [
     "Symbols",
     "suppress_c_output",
     # Data storage
+    "DatabaseReader",
     "Database",
     "DatabasePS",
     "DatabaseAoA",
@@ -108,7 +109,7 @@ def __getattr__(name):
         module = import_module(".utils", __name__)
         return getattr(module, name)
 
-    if name in {"Database", "DatabasePS", "DatabaseAoA", "encode", "decode"}:
+    if name in {"DatabaseReader", "Database", "DatabasePS", "DatabaseAoA", "encode", "decode"}:
         module = import_module(".data_storage", __name__)
         return getattr(module, name)
 

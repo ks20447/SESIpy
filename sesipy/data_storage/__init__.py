@@ -4,9 +4,9 @@ from importlib import import_module
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .database import Database, DatabaseAoA, DatabasePS, decode, encode
+    from .database import DatabaseReader, Database, DatabaseAoA, DatabasePS, decode, encode
 
-__all__ = ["Database", "DatabasePS", "DatabaseAoA", "encode", "decode"]
+__all__ = ["DatabaseReader", "Database", "DatabasePS", "DatabaseAoA", "encode", "decode"]
 
 
 def __getattr__(name):
