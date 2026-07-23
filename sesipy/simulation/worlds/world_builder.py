@@ -72,7 +72,7 @@ class WorldDescriptor:
                     x=(p1[0] + p2[0]) / 2,
                     y=(p1[1] + p2[1]) / 2,
                     width=math.hypot(dx, dy),
-                    theta=math.atan2(dy, dx),
+                    theta=math.degrees(math.atan2(dy, dx)),
                 )
             )
 
@@ -85,6 +85,9 @@ class WorldDescriptor:
         for interior in interiors:
             hole = sp.Polygon(interior)
             rect = hole.minimum_rotated_rectangle
+            
+            if type(rect) == sp.LineString:
+                continue
 
             pts = np.asarray(rect.exterior.coords[:-1])
 
@@ -96,7 +99,7 @@ class WorldDescriptor:
             length = unique.max()
 
             long_edge = edges[np.argmax(lengths)]
-            theta = math.atan2(long_edge[1], long_edge[0])
+            theta = math.degrees(math.atan2(long_edge[1], long_edge[0]))
 
             center = pts.mean(axis=0)
 
@@ -137,7 +140,7 @@ class WorldDescriptor:
                 wall.width,
                 0.0,
                 self.boundary_z,
-                np.rad2deg(wall.theta),
+                wall.theta,
             ]
             self.generator["fixed_obstacles"].append(wall_data)
 
@@ -147,8 +150,8 @@ class WorldDescriptor:
                 obstacle.x,
                 obstacle.y,
                 height / 2,
-                obstacle.width,
                 obstacle.length,
+                obstacle.width,
                 height,
                 obstacle.theta,
             ]
