@@ -74,14 +74,18 @@ class Plot2D:
 
     def _save_view(self, event, filename):
         event.canvas.figure.savefig(filename, bbox_inches="tight")
-
-    def show(self, filename=None):
         
+    def axes_set(self):
         for ax in self.axes.flatten():
             if self.equal_aspect:
                 ax.set_aspect("equal")
             if self.grid:
                 ax.grid(True)
+        
+
+    def show(self, filename=None):
+        
+        self.axes_set()
         
         if filename is not None:
             self.fig.canvas.mpl_connect(

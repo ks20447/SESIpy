@@ -37,7 +37,6 @@ class ReceiverArray(AntennaWrapper):
         self._target_wavelength = None
         self._steering_points = None
         self._beamform_array = None
-        self._aoa_threshold = None
 
     @property
     def target_freq(self):
@@ -76,14 +75,6 @@ class ReceiverArray(AntennaWrapper):
     @beamform_array.setter
     def beamform_array(self, points):
         self._beamform_array = points
-
-    @property
-    def aoa_threshold(self):
-        return self._aoa_threshold
-
-    @aoa_threshold.setter
-    def aoa_threshold(self, value):
-        self._aoa_threshold = value
 
     def create_aperture(self):
 
@@ -130,8 +121,8 @@ class ReceiverArray(AntennaWrapper):
                 scattering_power(scatter, weights=weights)
             )
 
-        steering_mesh.point_data["Power"] = steering_power - np.max(steering_power)
-        steering_mesh.point_data["Theta"] = np.arctan2(self.steering_points[:, 1], self.steering_points[:, 0])
+        steering_mesh.point_data["Power"] = np.array(steering_power - np.max(steering_power), dtype=np.float32)
+        steering_mesh.point_data["Theta"] = np.array(np.arctan2(self.steering_points[:, 1], self.steering_points[:, 0]), dtype=np.float32)
 
         return pv.to_meshio(steering_mesh)
         
