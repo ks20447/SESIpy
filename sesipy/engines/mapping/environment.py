@@ -157,11 +157,12 @@ class Sampler3D:
         ymax=1.0,
         zmin=0.0,
         zmax=1.0,
+        mask=False,
     ):
 
         points = self.mesh.points
 
-        mask = (
+        box_mask = (
             (points[:, 0] >= xmin)
             & (points[:, 0] <= xmax)
             & (points[:, 1] >= ymin)
@@ -170,15 +171,41 @@ class Sampler3D:
             & (points[:, 2] <= zmax)
         )
 
-        sample_points = points[mask]
+        if mask:
+            return box_mask
+        return points[box_mask]
 
-        return sample_points
+    
+
+    def footprint_sample_3D(
+        self,
+        footprint,
+        z_min,
+        z_max,
+        buffer=1e-9,
+        mask=False
+    ):
+        
+        points = self.mesh.points
+
+        x = points[:, 0]
+        y = points[:, 1]
+        z = points[:, 2]
+
+        outer_bound = sp.Polygon(footprint.exterior)
+        mask_xy = sp.contains_xy(outer_bound.buffer(buffer), x, y)
+        
+        mask_z = (z >= z_min) & (z <= z_max)
+
+        if mask:
+            return mask_xy & mask_z
+        return points[mask_xy & mask_z]
 
     @staticmethod
     def points_mesh(points):
         return meshio.Mesh(
-            points=sample_points,
-            cells=[("vertex", np.arange(len(sample_points)).reshape(-1, 1))],
+            points=points,
+            cells=[("vertex", np.arange(len(points)).reshape(-1, 1))],
         )
 
     @staticmethod

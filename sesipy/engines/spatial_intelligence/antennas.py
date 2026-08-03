@@ -24,6 +24,16 @@ class TransmitterArray(AntennaWrapper):
         self.wavelength = speed_of_light / self.freq
         self.polarization = polarization
 
+    @property
+    def desired_E_axis(self):
+        return np.zeros(
+            (len(self.aperture.export_all_points().points), 3)
+        ) + self.aperture.excitation_function(
+            self.polarization,
+            wavelength=self.wavelength,
+            transmit_power=self.power,
+        )
+
 
 class ReceiverArray(AntennaWrapper):
 
@@ -51,11 +61,11 @@ class ReceiverArray(AntennaWrapper):
     @property
     def target_wavelength(self):
         return self._target_wavelength
-    
+
     @property
     def aperture_gain(self):
         return self._aperture_gain
-    
+
     @aperture_gain.setter
     def aperture_gain(self, val):
         self._aperture_gain = val * self.gain
@@ -98,7 +108,7 @@ class ReceiverArray(AntennaWrapper):
             aperture_structure,
             aperture_points,
         )
-        
+
     def wave_front_steering(self, array_points, scatter):
 
         location = np.mean(array_points, axis=0)
@@ -117,36 +127,39 @@ class ReceiverArray(AntennaWrapper):
                 self.target_wavelength,
             )
 
-            steering_power[i] = to_dBm(
-                scattering_power(scatter, weights=weights)
-            )
+            steering_power[i] = to_dBm(scattering_power(scatter, weights=weights))
 
-        steering_mesh.point_data["Power"] = np.array(steering_power - np.max(steering_power), dtype=np.float32)
-        steering_mesh.point_data["Theta"] = np.array(np.arctan2(self.steering_points[:, 1], self.steering_points[:, 0]), dtype=np.float32)
+        steering_mesh.point_data["Power"] = np.array(
+            steering_power - np.max(steering_power), dtype=np.float32
+        )
+        steering_mesh.point_data["Theta"] = np.array(
+            np.arctan2(self.steering_points[:, 1], self.steering_points[:, 0]),
+            dtype=np.float32,
+        )
 
         return pv.to_meshio(steering_mesh)
-        
-        
+
+
 class PointSource(TransmitterArray):
-    
+
     def __init__(self, freq, power):
-        
+
         super().__init__(freq, power, np.array([0.0, 0.0, 1.0], dtype=np.complex64))
-            
+
         self.points = np.array([[0.0, 0.0, 0.0]])
         self.structure = None
         self.point_normals = np.array([[0.0, 0.0, 1.0]])
         self.point_area = np.array([1.0])
-        
-        
+
+
 class IsotropicReceiver(ReceiverArray):
-    
+
     def __init__(self, n_az=12, n_el=7):
-        
+
         super().__init__(gain=1.0)
-        
+
         self.points = np.vstack(ArrayFactory.spherical(n_az, n_el, 0.01))
         self.structure = None
-        
+
         self.normal_factory.apply("outward")
         self.point_area = np.array([1.0] * len(self.points_mesh.points))

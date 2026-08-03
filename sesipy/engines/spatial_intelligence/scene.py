@@ -58,6 +58,10 @@ class Scene:
     @property
     def scatterers(self):
         return self._scatterers
+    
+    @scatterers.deleter
+    def scatterers(self):
+        self._scatterers = []
 
     def add_scatterers(self, meshes):
 
@@ -94,7 +98,7 @@ class Scene:
 
         self.blocker_structure = structures(self.blockers)
         self.scatter_points = points(self.scatterers).export_points()
-        self.scatter_points.points += 0.00 * self.scatter_points.point_data["Normals"]
+        # self.scatter_points.points += 0.01 * self.scatter_points.point_data["Normals"]
 
     def calculate_receiver_scattering(self):
 
@@ -105,11 +109,7 @@ class Scene:
                 aperture_coords=self.transmitter.aperture.export_all_points(),
                 sink_coords=self.receiver.aperture.export_all_points(),
                 antenna_solid=self.blocker_structure.export_combined_meshio(),
-                desired_E_axis=self.transmitter.aperture.excitation_function(
-                    self.transmitter.polarization,
-                    wavelength=self.transmitter.wavelength,
-                    transmit_power=self.transmitter.power,
-                ),
+                desired_E_axis=self.transmitter.desired_E_axis,
                 scatter_points=self.scatter_points,
                 wavelength=self.transmitter.wavelength,
                 scattering=self.scatter,
@@ -129,11 +129,7 @@ class Scene:
                 aperture_coords=self.transmitter.aperture.export_all_points(),
                 sink_coords=self.scatter_points,
                 antenna_solid=self.blocker_structure.export_combined_meshio(),
-                desired_E_axis=self.transmitter.aperture.excitation_function(
-                    self.transmitter.polarization,
-                    wavelength=self.transmitter.wavelength,
-                    transmit_power=self.transmitter.power,
-                ),
+                desired_E_axis=self.transmitter.desired_E_axis,
                 scatter_points=self.scatter_points,
                 wavelength=self.transmitter.wavelength,
                 scattering=0,
