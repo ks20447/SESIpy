@@ -26,9 +26,7 @@ class TransmitterArray(AntennaWrapper):
 
     @property
     def desired_E_axis(self):
-        return np.zeros(
-            (len(self.aperture.export_all_points().points), 3)
-        ) + self.aperture.excitation_function(
+        return self.aperture.excitation_function(
             self.polarization,
             wavelength=self.wavelength,
             transmit_power=self.power,
