@@ -107,7 +107,7 @@ class ReceiverArray(AntennaWrapper):
             aperture_points,
         )
 
-    def wave_front_steering(self, array_points, scatter):
+    def wave_front_steering(self, array_points, scatter, relative=True):
 
         location = np.mean(array_points, axis=0)
 
@@ -126,9 +126,12 @@ class ReceiverArray(AntennaWrapper):
             )
 
             steering_power[i] = to_dBm(scattering_power(scatter, weights=weights))
-
+             
+        if relative:
+            steering_power -= np.max(steering_power)
+        
         steering_mesh.point_data["Power"] = np.array(
-            steering_power - np.max(steering_power), dtype=np.float32
+            steering_power, dtype=np.float32
         )
         steering_mesh.point_data["Theta"] = np.array(
             np.arctan2(self.steering_points[:, 1], self.steering_points[:, 0]),

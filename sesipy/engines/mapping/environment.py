@@ -5,12 +5,12 @@ import shapely as sp
 
 class Sampler2D:
 
-    def __init__(self, polygon):
+    def __init__(self, polygon, centroid_height=0.0):
 
         self.polygon = polygon
 
         cent_x, cent_y = self.polygon.centroid.xy
-        self.centroid = np.array([cent_x[0], cent_y[0], 0.0])
+        self.centroid = np.array([cent_x[0], cent_y[0], centroid_height])
 
     def polygon_intersect_2D(self, polygon):
         return self.polygon.intersection(polygon).buffer(0.0)
