@@ -1,169 +1,250 @@
+import gc
+import threading
+import time
+import statistics
+
 import numpy as np
-from sesipy.utils import ArrayFactory
-from sesipy.plotting import Plot2D
-from sesipy.engines.mapping import Environment, Sampler2D
-from sesipy.simulation.worlds import Outdoor
-from sesipy.engines.evaluation.signals import (
-    compare_power_distributions,
-    rank_power_distributions,
-)
-from sesipy.engines.spatial_intelligence.angle_of_arrival import (
-    extract_aoa,
-    aoa_projection_2D,
-)
+import pandas as pd
+import psutil
+import shapely as sp
+import pynvml
+
+from scipy.constants import speed_of_light as C
+
+from sesipy.simulation.worlds import WorldDescriptor, WorldBuilder
 from sesipy.engines.spatial_intelligence import (
     IsotropicReceiver,
     PointSource,
-    TransmitterArray,
     Scene,
 )
 
 FREQ = 2.4e9
+WAVELENGTH = C / FREQ
 POWER = 0.1
+GPU_ID = 0
+RUNS_PER_SCALE = 5
+
+
+def initialise_test_world(scale):
+    world_desc = WorldDescriptor(True, False, True, boundary_z=1.0)
+    world_poly = sp.box(-scale, -scale, scale, scale)
+    world_desc.build_from_polygon(world_poly, [])
+    return WorldBuilder(world_desc.get_data(), scatter_resolution=WAVELENGTH)
 
 
 def initialise_receiver():
-
     receiver = IsotropicReceiver()
-
     receiver.target_freq = FREQ
-    receiver.steering_points = ArrayFactory.circle(200, 0.5)
-    receiver.beamform_array = ArrayFactory.circle(4, receiver.target_wavelength / 4)
-
     return receiver
 
 
 def initialise_transmitter():
-
-    transmitter = PointSource(FREQ, POWER)
-
-    return transmitter
-
-
-def sample_transmitter(points, normals):
-
-    transmitter = TransmitterArray(
-        FREQ, POWER, polarization=np.array([0.0, 0.0, 1.0], dtype=np.complex64)
-    )
-    transmitter.points = points
-    transmitter.point_normals = normals
-
-    transmitter.point_area = np.array([1.0] * len(transmitter.points_mesh.points))
-
-    return transmitter
+    return PointSource(FREQ, POWER)
 
 
 def initialise_scene(world, transmitter, receiver):
-
     scene = Scene(scatter=True, cuda=True)
-
     scene.receiver = receiver
     scene.transmitter = transmitter
     scene.add_blockers([world.blocker_mesh])
-    scene.add_scatterers([world.scatterers[-1]])
-
+    scene.add_scatterers(world.scatterers)
     return scene
 
 
+class GPUMonitor:
+    def __init__(self, gpu_id=0, interval=0.005):
+        self.handle = pynvml.nvmlDeviceGetHandleByIndex(gpu_id)
+        self.interval = interval
+        self.running = False
+        self.thread = None
+        self.peak_memory = 0
+        self.peak_utilisation = 0
+
+    def _monitor(self):
+        while self.running:
+            memory = pynvml.nvmlDeviceGetMemoryInfo(self.handle)
+            utilisation = pynvml.nvmlDeviceGetUtilizationRates(self.handle)
+            self.peak_memory = max(self.peak_memory, memory.used)
+            self.peak_utilisation = max(self.peak_utilisation, utilisation.gpu)
+            time.sleep(self.interval)
+
+    def start(self):
+        memory = pynvml.nvmlDeviceGetMemoryInfo(self.handle)
+        self.peak_memory = memory.used
+        self.peak_utilisation = 0
+        self.running = True
+        self.thread = threading.Thread(target=self._monitor, daemon=True)
+        self.thread.start()
+
+    def stop(self):
+        self.running = False
+        if self.thread is not None:
+            self.thread.join()
+
+    def get_memory_mb(self):
+        return self.peak_memory / 1024**2
+
+    def get_utilisation_percent(self):
+        return self.peak_utilisation
+
+
+def get_gpu_memory():
+    handle = pynvml.nvmlDeviceGetHandleByIndex(GPU_ID)
+    memory = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    return memory.used / 1024**2
+
+
+def synchronise_gpu():
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+    except ImportError:
+        pass
+    try:
+        import cupy
+
+        cupy.cuda.Stream.null.synchronize()
+    except ImportError:
+        pass
+
+
+def clear_cuda_cache():
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except ImportError:
+        pass
+    try:
+        import cupy
+
+        cupy.get_default_memory_pool().free_all_blocks()
+    except ImportError:
+        pass
+
+
+def warmup_scattering(scene):
+    synchronise_gpu()
+    scene.calculate_receiver_scattering()
+    synchronise_gpu()
+
+
+def profile_scattering(scene, world, runs=RUNS_PER_SCALE):
+    process = psutil.Process()
+
+    # warmup_scattering(scene)
+
+    gc.collect()
+    clear_cuda_cache()
+    synchronise_gpu()
+
+    cpu_memory_before = process.memory_info().rss
+    gpu_memory_before = get_gpu_memory()
+
+    gpu_monitor = GPUMonitor(GPU_ID)
+    gpu_monitor.start()
+
+    execution_times = []
+
+    for _ in range(runs):
+        synchronise_gpu()
+        start = time.perf_counter()
+
+        scene.calculate_receiver_scattering()
+
+        synchronise_gpu()
+        execution_times.append(time.perf_counter() - start)
+
+    gpu_monitor.stop()
+
+    cpu_memory_after = process.memory_info().rss
+    gpu_memory_after = get_gpu_memory()
+
+    median_time = statistics.median(execution_times)
+
+    return {
+        "calculation_time_s": median_time,
+        "cpu_memory_before_mb": cpu_memory_before / 1024**2,
+        "cpu_memory_after_mb": cpu_memory_after / 1024**2,
+        "cpu_memory_delta_mb": (cpu_memory_after - cpu_memory_before) / 1024**2,
+        "gpu_memory_before_mb": gpu_memory_before,
+        "gpu_memory_after_mb": gpu_memory_after,
+        "gpu_memory_delta_mb": (gpu_memory_after - gpu_memory_before),
+        "gpu_peak_memory_mb": gpu_monitor.get_memory_mb(),
+        "gpu_peak_utilisation_percent": gpu_monitor.get_utilisation_percent(),
+    }
+
+
 def main():
+    
+    pynvml.nvmlInit()
+    scales = np.arange(0.0, 51.0, 10.0)
+    scales[0] = 1.0
 
-    world = Outdoor(scatter_resolution=0.2, seed=2)
-    env = Environment(world.floor_plan, world.scatter_mesh)
+    results = []
 
-    transmitter = initialise_transmitter()
-    receiver = initialise_receiver()
-    scene = initialise_scene(world, transmitter, receiver)
+    for scale in scales:
+        print(f"\nScale: {scale:.3f}")
 
-    np.random.seed(10)
-    t_loc = env.env2D.random_sample_2D(1, buffer=-0.5, z=0.5)[0]
-    transmitter.translate_to(t_loc)
+        world = initialise_test_world(scale)
+        transmitter = initialise_transmitter()
+        receiver = initialise_receiver()
 
-    path, theta = env.env2D.linear_path_2D((20, 1), (0, 0), 1, buffer=0.0, z=0.5)
+        scene = initialise_scene(world, transmitter, receiver)
+        transmitter.translate_to(np.array([0.0, 0.0, 0.5]))
+        receiver.translate_to(np.array([0.5, 0.5, 0.5]))
 
-    idx = 0
-    loc, rot = path[idx], theta[idx]
+        n_points = np.sum(world.scatter_metadata["points"])
 
-    array_rot = np.array([0.0, 0.0, rot])
+        print(f"Profiling over {RUNS_PER_SCALE} runs...")
+        result = profile_scattering(scene, world)
 
-    array_points = receiver.beamform_array + loc
-    array_points = ArrayFactory.rotate(array_points, array_rot, loc)
+        result["scale"] = scale
+        result["n_points"] = n_points
+        results.append(result)
 
-    scatter, _ = scene.sample_receiver_scattering(
-        array_points, [array_rot] * len(array_points)
-    )
-    mean_scatter = np.array([np.mean(scat, axis=2) for scat in scatter]).T[0]
-    steering_mesh = receiver.wave_front_steering(array_points, mean_scatter)
-
-    aoa = extract_aoa(steering_mesh, drop_dB=0.4)
-
-    steering_mesh_abs = receiver.wave_front_steering(
-        array_points, mean_scatter, relative=False
-    )
-
-    fov = aoa_projection_2D(loc[0:2], aoa, length=100)
-    intersect_fov = env.env2D.polygon_intersect_2D(fov)
-
-    fov_sampler = Sampler2D(intersect_fov, centroid_height=0.5)
-    edge_samples = fov_sampler.edge_sample_2D(4, buffer=-0.5, z=0.5)
-    polygon_samples = fov_sampler.join_samples(edge_samples, fov_sampler.centroid)
-
-    candidate_spectrums = []
-    for sample in polygon_samples:
-
-        transmitter.translate_to(sample)
-
-        scatter, _ = scene.sample_receiver_scattering(
-            array_points, [array_rot] * len(array_points)
-        )
-        mean_scatter = np.array([np.mean(scat, axis=2) for scat in scatter]).T[0]
-        candidate_mesh = receiver.wave_front_steering(
-            array_points, mean_scatter, relative=False
-        )
-        candidate_spectrums.append(candidate_mesh)
-
-    plotter = Plot2D(2, 2)
-
-    plotter.set_ax(0, 0)
-    plotter.ax.grid(False)
-    plotter.plot_fov(loc, intersect_fov)
-    plotter.plot_polygon(
-        world.floor_plan, c="black", fill_outline=False, fill_holes=True, opacity=1
-    )
-    plotter.plot_scatter(np.array([t_loc[0:2]]), separate=False, marker="x", c="red")
-    plotter.plot_scatter(polygon_samples[:, 0:2], separate=True)
-
-    plotter.set_ax(0, 1)
-    plotter.plot_aoa(
-        steering_mesh_abs.point_data["Theta"],
-        steering_mesh_abs.point_data["Power"],
-        linewidth=3,
-        zorder=10,
-    )
-
-    comps = []
-    for spectrum in candidate_spectrums:
-
-        plotter.plot_aoa(
-            spectrum.point_data["Theta"],
-            spectrum.point_data["Power"],
-            r_min=-100.0,
+        print(
+            f"Points:          {n_points:,}\n"
+            f"Median Time:     {result['calculation_time_s']:.4f} s\n"
+            f"CPU mem delta:   {result['cpu_memory_delta_mb']:.1f} MB\n"
+            f"GPU mem delta:   {result['gpu_memory_delta_mb']:.1f} MB\n"
+            f"GPU peak mem:    {result['gpu_peak_memory_mb']:.1f} MB\n"
+            f"GPU utilisation: {result['gpu_peak_utilisation_percent']:.1f}%"
         )
 
-        comp = compare_power_distributions(
-            steering_mesh_abs.point_data["Power"], spectrum.point_data["Power"]
-        )
-        comps.append(comp)
+        del scene
+        del receiver
+        del transmitter
+        del world
 
-    plotter.set_ax(1, 0)
-    plotter.plot_power_metrics(comps, show_average=True)
+        gc.collect()
+        clear_cuda_cache()
 
-    ranked = rank_power_distributions(comps)
+    df = pd.DataFrame(results)
+    df = df[
+        [
+            "scale",
+            "n_points",
+            "calculation_time_s",
+            "cpu_memory_before_mb",
+            "cpu_memory_after_mb",
+            "cpu_memory_delta_mb",
+            "gpu_memory_before_mb",
+            "gpu_memory_after_mb",
+            "gpu_memory_delta_mb",
+            "gpu_peak_memory_mb",
+            "gpu_peak_utilisation_percent",
+        ]
+    ]
 
-    plotter.set_ax(1, 1)
-    plotter.plot_power_metrics_ranked(ranked)
+    df.to_csv("sesipy_scattering_profile.csv", index=False)
+    print("\n")
+    print(df.to_string(index=False))
 
-    plotter.auto_equal_aspect()
-    plotter.show(auto_set=False)
+    pynvml.nvmlShutdown()
 
 
 if __name__ == "__main__":
