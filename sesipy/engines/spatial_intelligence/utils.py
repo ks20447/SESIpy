@@ -1,6 +1,7 @@
 import copy
 import meshio
 import numpy as np
+from scipy.sparse import coo_matrix
 from scipy.spatial.transform import Rotation
 
 def translate(mesh: meshio.Mesh, translation: np.ndarray) -> None:
@@ -61,28 +62,46 @@ def to_dBm(array):
 
 def smooth_point_data(mesh: meshio.Mesh, key: str, iterations: int = 1):
     values = mesh.point_data[key].copy()
-
     n_points = len(mesh.points)
-    neighbours = [set() for _ in range(n_points)]
+
+    edges = []
 
     for cell_block in mesh.cells:
         if cell_block.type != "triangle":
             continue
 
-        for tri in cell_block.data:
-            i, j, k = tri
-            neighbours[i].update((j, k))
-            neighbours[j].update((i, k))
-            neighbours[k].update((i, j))
+        triangles = cell_block.data
+
+        edges.append(triangles[:, [0, 1]])
+        edges.append(triangles[:, [1, 0]])
+        edges.append(triangles[:, [1, 2]])
+        edges.append(triangles[:, [2, 1]])
+        edges.append(triangles[:, [2, 0]])
+        edges.append(triangles[:, [0, 2]])
+
+    edges = np.concatenate(edges, axis=0)
+
+    rows = edges[:, 0]
+    cols = edges[:, 1]
+
+    adjacency = coo_matrix(
+        (
+            np.ones(len(edges)),
+            (rows, cols)
+        ),
+        shape=(n_points, n_points)
+    ).tocsr()
+
+    adjacency.data[:] = 1
+
+    degree = np.asarray(adjacency.sum(axis=1)).ravel() + 1
 
     for _ in range(iterations):
-        new_values = values.copy()
-
-        for i, nbrs in enumerate(neighbours):
-            if nbrs:
-                new_values[i] = values[[i, *nbrs]].mean(axis=0)
-
-        values = new_values
+        values = (
+            values + adjacency @ values
+        ) / degree[:, None] if values.ndim > 1 else (
+            values + adjacency @ values
+        ) / degree
 
     mesh.point_data[key] = values
 
