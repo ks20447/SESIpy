@@ -1,4 +1,48 @@
 import numpy as np
+from scipy.spatial.distance import cdist
+
+
+def neighborhood_adjusted_correlation(reference, targets, target_locs, n_neighbors):
+    reference = np.asarray(reference, dtype=float).ravel()
+    targets = np.asarray(targets, dtype=float)
+    target_locs = np.asarray(target_locs, dtype=float)
+
+    correlations = np.empty(len(targets))
+
+    for i, target in enumerate(targets):
+        target = target.ravel()
+
+        if np.std(reference) == 0 or np.std(target) == 0:
+            correlations[i] = 0.0
+        else:
+            correlations[i] = np.corrcoef(reference, target)[0, 1]
+
+    shifted_correlations = (1 + correlations) / 2
+
+    distances = cdist(target_locs, target_locs)
+
+    neighbor_indices = np.argsort(distances, axis=1)[:, 1:n_neighbors + 1]
+    neighbor_distances = np.take_along_axis(
+        distances,
+        neighbor_indices,
+        axis=1,
+    )
+
+    neighbor_scores = shifted_correlations[neighbor_indices]
+
+    weights = 1 / neighbor_distances**2
+
+    weighted_neighbor_score = (
+        np.sum(weights * neighbor_scores, axis=1)
+        / np.sum(weights, axis=1)
+    )
+
+    adjusted_scores = (
+        shifted_correlations * weighted_neighbor_score
+    )
+
+    return adjusted_scores
+
 
 def normalize_metrics(results, metrics, lower_is_better):
     values = {}
