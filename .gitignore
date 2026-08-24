@@ -1,2 +1,12 @@
 .vscode/
 __pycache__/
+__marimo__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
