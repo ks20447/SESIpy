@@ -62,6 +62,7 @@ class Scene:
     @scatterers.deleter
     def scatterers(self):
         self._scatterers = []
+        
 
     def add_scatterers(self, meshes):
 
@@ -77,6 +78,10 @@ class Scene:
     @property
     def blockers(self):
         return self._blockers
+    
+    @blockers.deleter
+    def blockers(self):
+        self._blockers = []
 
     def add_blockers(self, meshes):
 
