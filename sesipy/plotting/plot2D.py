@@ -467,3 +467,8 @@ class Plot2D:
             vmin=0,
             vmax=1,
         )
+        
+    def plot_meshgrid_surface(self, X, Y, Z):
+        
+        im = self.ax.pcolormesh(X, Y, Z, shading="auto")
+        self.fig.colorbar(im, ax=self.ax)
