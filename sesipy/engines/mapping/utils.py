@@ -4,6 +4,7 @@ import vtk
 import yaml
 import numpy as np
 import pyvista as pv
+import open3d as o3d
 from open3d import geometry, utility
 from shapely import Point, Polygon, MultiPoint, LineString
 from scipy.spatial import cKDTree
@@ -118,7 +119,7 @@ def simulate_lidar(
     }
 
 
-def clean_lidar(
+def _clean_lidar(
     points,
     min_range=0.0,
     max_range=np.inf,
@@ -432,3 +433,74 @@ def map_yaml_to_polygon(yaml_file):
         raise ValueError("No valid polygon found.")
 
     return max(polygons, key=lambda p: p.area)
+
+
+def cluster_pointcloud(points, eps=0.2, min_points=20):
+    points = np.asarray(points, dtype=np.float64)
+
+    cloud = o3d.geometry.PointCloud()
+    cloud.points = o3d.utility.Vector3dVector(points)
+
+    labels = np.array(
+        cloud.cluster_dbscan(
+            eps=eps,
+            min_points=min_points,
+            print_progress=True,
+        )
+    )
+
+    clouds = []
+
+    for label in np.unique(labels):
+        if label == -1:
+            continue
+
+        cluster = points[labels == label]
+        clouds.append(cluster)
+
+    return clouds
+
+
+def remove_small_holes(polygon, min_area):
+    holes = [
+        hole for hole in polygon.interiors
+        if Polygon(hole).area >= min_area
+    ]
+
+    return Polygon(polygon.exterior, holes)
+
+
+def remove_boundary_points(
+    points,
+    polygon,
+    floor_height,
+    roof_height,
+    height_tolerance=0.01,
+    boundary_tolerance=0.01,
+):
+    points = np.asarray(points)
+
+    z = points[:, 2]
+
+    floor_mask = np.isclose(
+        z,
+        floor_height,
+        atol=height_tolerance,
+    )
+
+    roof_mask = np.isclose(
+        z,
+        roof_height,
+        atol=height_tolerance,
+    )
+
+    exterior = polygon.exterior
+
+    boundary_mask = np.array([
+        exterior.distance(Point(x, y)) <= boundary_tolerance
+        for x, y in points[:, :2]
+    ])
+
+    keep_mask = ~(floor_mask | roof_mask | boundary_mask)
+
+    return points[keep_mask]

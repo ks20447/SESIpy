@@ -1,147 +1,100 @@
 import numpy as np
+import open3d as o3d
+import shapely as sp
+from sesipy.simulation.worlds import Indoor
+from sesipy.plotting import Plot2D, Plot3D
+from sesipy.engines.mapping import (
+    Environment,
+    extract_lidar_metadata,
+    map_yaml_to_polygon,
+)
+from sesipy.engines.mapping.utils import (
+    cluster_pointcloud,
+    remove_small_holes,
+    remove_boundary_points,
+    mesh_error,
+)
+from sesipy.simulation.worlds import WorldDescriptor, WorldBuilder
 from scipy.spatial.distance import cdist
-from sesipy.utils import ArrayFactory
-from sesipy.plotting import Plot2D
-from sesipy.engines.mapping import Environment, Sampler2D
-from sesipy.simulation.worlds import Outdoor
-from sesipy.engines.evaluation.signals import neighborhood_adjusted_correlation
-from sesipy.engines.spatial_intelligence.angle_of_arrival import (
-    extract_aoa,
-    aoa_projection_2D,
-)
-from sesipy.engines.spatial_intelligence import (
-    IsotropicReceiver,
-    PointSource,
-    TransmitterArray,
-    Scene,
-)
-
-FREQ = 2.4e9
-POWER = 0.1
-
-
-def initialise_receiver():
-
-    receiver = IsotropicReceiver()
-
-    receiver.target_freq = FREQ
-    receiver.steering_points = ArrayFactory.circle(200, 0.5)
-    receiver.beamform_array = ArrayFactory.circle(4, receiver.target_wavelength / 4)
-
-    return receiver
-
-
-def initialise_transmitter():
-
-    transmitter = PointSource(FREQ, POWER)
-
-    return transmitter
-
-
-def sample_transmitter(points, normals):
-
-    transmitter = TransmitterArray(
-        FREQ,
-        POWER,
-        polarization=np.array([0.0, 0.0, 1.0], dtype=np.complex64),
-    )
-    transmitter.points = points
-    transmitter.point_normals = normals
-
-    transmitter.point_area = np.array([1.0] * len(transmitter.points_mesh.points))
-
-    return transmitter
-
-
-def initialise_scene(world, transmitter, receiver):
-
-    scene = Scene(scatter=True, cuda=True)
-
-    scene.receiver = receiver
-    scene.transmitter = transmitter
-    scene.add_blockers([world.blocker_mesh])
-    scene.add_scatterers([world.scatterers[-1]])
-
-    return scene
 
 
 def main():
 
-    world = Outdoor(scatter_resolution=0.2, seed=2)
+    world = Indoor(scatter_resolution=0.2)
     env = Environment(world.floor_plan, world.scatter_mesh)
 
-    transmitter = initialise_transmitter()
-    receiver = initialise_receiver()
-    scene = initialise_scene(world, transmitter, receiver)
+    lidar = o3d.io.read_point_cloud("pointcloud.pcd")
 
-    np.random.seed(10)
-    t_loc = env.env2D.random_sample_2D(1, buffer=-0.5, z=0.5)[0]
-    transmitter.translate_to(t_loc)
+    lidar_downsampled = lidar.voxel_down_sample(voxel_size=0.1)
+    o3d.visualization.draw_geometries([lidar_downsampled])
 
-    path, ori = env.env2D.linear_path_2D((20, 1), (0, 0), 1, buffer=0.0, z=0.5)
-
-    idx = 0
-    loc, rot = path[idx], ori[idx]
-
-    array_rot = np.array([0.0, 0.0, rot])
-
-    array_points = receiver.beamform_array + loc
-    array_points = ArrayFactory.rotate(array_points, array_rot, loc)
-
-    scatter, _ = scene.sample_receiver_scattering(
-        array_points, [array_rot] * len(array_points)
-    )
-    mean_scatter = np.array([np.mean(scat, axis=2) for scat in scatter]).T[0]
-
-    n_edge = 10
-    n_rand = 75
-    n_neighbors = 10
-
-    steering_mesh = receiver.wave_front_steering(array_points, mean_scatter)
-
-    aoa = extract_aoa(steering_mesh, drop_dB=0.4)
-
-    steering_mesh_abs = receiver.wave_front_steering(
-        array_points, mean_scatter, relative=False
+    lidar_meta = extract_lidar_metadata(
+        lidar_downsampled.points, eps=0.5, min_samples=20, normal_radius=0.5
     )
 
-    fov = aoa_projection_2D(loc[0:2], aoa, length=100)
-    intersect_fov = env.env2D.polygon_intersect_2D(fov)
+    obj_footprints = [ob["footprint"].exterior.coords for ob in lidar_meta["objects"]]
+    lidar_map = sp.Polygon(lidar_meta["boundary"].exterior.coords, holes=obj_footprints)
 
-    fov_sampler = Sampler2D(intersect_fov, centroid_height=0.5)
-    edge_samples = fov_sampler.edge_sample_2D(n_edge, buffer=-0.5, z=0.5)
-    random_samples = env.env2D.random_sample_2D(n_rand, buffer=-0.2, z=0.5)
-    polygon_samples = fov_sampler.join_samples(
-        edge_samples, fov_sampler.centroid, random_samples
+    yaml_map = map_yaml_to_polygon("indoor_map.yaml")
+    yaml_map = yaml_map.simplify(0.1)
+    yaml_map = remove_small_holes(yaml_map, 0.1)
+
+    plot_map = Plot2D(1, 3)
+
+    plot_map.set_ax(0, 0)
+    plot_map.plot_polygon(env.env2D.polygon, fill_holes=True)
+
+    plot_map.set_ax(0, 1)
+    plot_map.plot_polygon(lidar_map, fill_holes=True)
+
+    plot_map.set_ax(0, 2)
+    plot_map.plot_polygon(yaml_map, fill_holes=True)
+
+    plot_map.show()
+
+    object_points = remove_boundary_points(
+        lidar_downsampled.points,
+        yaml_map,
+        lidar_meta["floor_height"],
+        lidar_meta["roof_height"],
+        height_tolerance=0.1,
+        boundary_tolerance=0.5,
     )
 
-    candidate_spectrums = []
-    for sample in polygon_samples:
-        transmitter.translate_to(sample)
+    object_clusters = cluster_pointcloud(object_points, eps=0.6)
+    object_metas = [extract_lidar_metadata(o) for o in object_clusters]
+    object_centers = np.array(
+        [cluster[:, :2].mean(axis=0) for cluster in object_clusters]
+    )
+    object_heights = [m["roof_height"] for m in object_metas]
 
-        candidate_scatter, _ = scene.sample_receiver_scattering(
-            array_points, [array_rot] * len(array_points)
-        )
-        mean_candidate_scatter = np.array(
-            [np.mean(scat, axis=2) for scat in candidate_scatter]
-        ).T[0]
-        candidate_mesh = receiver.wave_front_steering(
-            array_points, mean_candidate_scatter, relative=False
-        )
-        candidate_spectrums.append(candidate_mesh)
-
-    ref = steering_mesh_abs.point_data["Power"].ravel()
-    candidate_powers = [c.point_data["Power"] for c in candidate_spectrums]
-
-    dists = np.linalg.norm(polygon_samples[:, 0:2] - t_loc[0:2], axis=1)
-    adjusted_scores = neighborhood_adjusted_correlation(
-        ref, candidate_powers, polygon_samples[:, :2], n_neighbors
+    interior_centers = np.array(
+        [sp.Polygon(interior).centroid.coords[0] for interior in yaml_map.interiors]
     )
 
-    plot_corr = Plot2D(1, 1)
-    plot_corr.equal_aspect = False
-    plot_corr.plot_scatter(np.column_stack((dists, adjusted_scores)))
-    plot_corr.show()
+    distances = cdist(object_centers, interior_centers)
+    matches = np.argmin(distances, axis=1)
+
+    ordered_heights = np.empty(len(interior_centers))
+    for ob_idx, interior_idx in enumerate(matches):
+        ordered_heights[interior_idx] = object_heights[ob_idx]
+
+    world_desc = WorldDescriptor(
+        floor=True, roof=False, walls=False, boundary_z=lidar_meta["roof_height"]
+    )
+    world_desc.build_from_polygon(yaml_map, obstacle_heights=ordered_heights)
+
+    indoor_recon = WorldBuilder(params=world_desc.get_data(), scatter_resolution=0.2)
+
+    plotter = Plot3D(1, 2)
+
+    plotter.set_plot(0, 0)
+    plotter.plot_scatterers(world.scatterers)
+
+    plotter.set_plot(0, 1)
+    plotter.plot_scatterers(indoor_recon.scatterers)
+
+    plotter.show()
 
 
 if __name__ == "__main__":
