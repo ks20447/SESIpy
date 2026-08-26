@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .environment import Environment, Sampler2D, Sampler3D
     from .utils import (
-        clean_lidar,
+        cluster_pointcloud,
         extract_lidar_metadata,
         map_yaml_to_polygon,
         mesh_error,
+        remove_boundary_points,
+        remove_small_holes,
         simulate_lidar,
     )
 
@@ -19,7 +21,9 @@ __all__ = [
     "Sampler3D",
     "map_yaml_to_polygon",
     "simulate_lidar",
-    "clean_lidar",
+    "cluster_pointcloud",
+    "remove_small_holes",
+    "remove_boundary_points",
     "extract_lidar_metadata",
     "mesh_error",
 ]
@@ -30,7 +34,9 @@ _MODULES = {
     "Sampler3D": ".environment",
     "map_yaml_to_polygon": ".utils",
     "simulate_lidar": ".utils",
-    "clean_lidar": ".utils",
+    "cluster_pointcloud": ".utils",
+    "remove_small_holes": ".utils",
+    "remove_boundary_points": ".utils",
     "extract_lidar_metadata": ".utils",
     "mesh_error": ".utils",
 }

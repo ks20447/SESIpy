@@ -5,7 +5,14 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .utils import ArrayFactory, NormalFactory, Symbols, suppress_c_output
-    from .data_storage import DatabaseReader, Database, DatabaseAoA, DatabasePS, decode, encode
+    from .data_storage import (
+        DatabaseReader,
+        Database,
+        DatabaseAoA,
+        DatabasePS,
+        decode,
+        encode,
+    )
     from .simulation import (
         World,
         Indoor,
@@ -44,9 +51,17 @@ if TYPE_CHECKING:
         multi_aoa_projection_2D,
         map_yaml_to_polygon,
         simulate_lidar,
-        clean_lidar,
+        cluster_pointcloud,
+        remove_small_holes,
+        remove_boundary_points,
         extract_lidar_metadata,
         mesh_error,
+        scoring_surface,
+        sample_surface,
+        neighborhood_adjusted_correlation,
+        normalize_metrics,
+        compare_power_distributions,
+        rank_power_distributions,
     )
 
 __all__ = [
@@ -98,9 +113,17 @@ __all__ = [
     "multi_aoa_projection_2D",
     "map_yaml_to_polygon",
     "simulate_lidar",
-    "clean_lidar",
+    "cluster_pointcloud",
+    "remove_small_holes",
+    "remove_boundary_points",
     "extract_lidar_metadata",
     "mesh_error",
+    "scoring_surface",
+    "sample_surface",
+    "neighborhood_adjusted_correlation",
+    "normalize_metrics",
+    "compare_power_distributions",
+    "rank_power_distributions",
 ]
 
 
@@ -109,7 +132,14 @@ def __getattr__(name):
         module = import_module(".utils", __name__)
         return getattr(module, name)
 
-    if name in {"DatabaseReader", "Database", "DatabasePS", "DatabaseAoA", "encode", "decode"}:
+    if name in {
+        "DatabaseReader",
+        "Database",
+        "DatabasePS",
+        "DatabaseAoA",
+        "encode",
+        "decode",
+    }:
         module = import_module(".data_storage", __name__)
         return getattr(module, name)
 
@@ -157,9 +187,17 @@ def __getattr__(name):
         "multi_aoa_projection_2D",
         "map_yaml_to_polygon",
         "simulate_lidar",
-        "clean_lidar",
+        "cluster_pointcloud",
+        "remove_small_holes",
+        "remove_boundary_points",
         "extract_lidar_metadata",
         "mesh_error",
+        "scoring_surface",
+        "sample_surface",
+        "neighborhood_adjusted_correlation",
+        "normalize_metrics",
+        "compare_power_distributions",
+        "rank_power_distributions",
     }:
         module = import_module(".engines", __name__)
         return getattr(module, name)

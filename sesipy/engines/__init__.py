@@ -23,11 +23,21 @@ if TYPE_CHECKING:
         Environment,
         Sampler2D,
         Sampler3D,
-        clean_lidar,
+        cluster_pointcloud,
         extract_lidar_metadata,
         map_yaml_to_polygon,
         mesh_error,
+        remove_boundary_points,
+        remove_small_holes,
         simulate_lidar,
+    )
+    from .evaluation import (
+        compare_power_distributions,
+        neighborhood_adjusted_correlation,
+        normalize_metrics,
+        rank_power_distributions,
+        sample_surface,
+        scoring_surface,
     )
 
 __all__ = [
@@ -50,9 +60,17 @@ __all__ = [
     "Sampler3D",
     "map_yaml_to_polygon",
     "simulate_lidar",
-    "clean_lidar",
+    "cluster_pointcloud",
+    "remove_small_holes",
+    "remove_boundary_points",
     "extract_lidar_metadata",
     "mesh_error",
+    "scoring_surface",
+    "sample_surface",
+    "neighborhood_adjusted_correlation",
+    "normalize_metrics",
+    "compare_power_distributions",
+    "rank_power_distributions",
 ]
 
 
@@ -113,7 +131,9 @@ def __getattr__(name):
         "Sampler3D",
         "map_yaml_to_polygon",
         "simulate_lidar",
-        "clean_lidar",
+        "cluster_pointcloud",
+        "remove_small_holes",
+        "remove_boundary_points",
         "extract_lidar_metadata",
         "mesh_error",
     }:
@@ -121,10 +141,12 @@ def __getattr__(name):
             Environment,
             Sampler2D,
             Sampler3D,
-            clean_lidar,
+            cluster_pointcloud,
             extract_lidar_metadata,
             map_yaml_to_polygon,
             mesh_error,
+            remove_boundary_points,
+            remove_small_holes,
             simulate_lidar,
         )
 
@@ -134,9 +156,37 @@ def __getattr__(name):
             "Sampler3D": Sampler3D,
             "map_yaml_to_polygon": map_yaml_to_polygon,
             "simulate_lidar": simulate_lidar,
-            "clean_lidar": clean_lidar,
+            "cluster_pointcloud": cluster_pointcloud,
+            "remove_small_holes": remove_small_holes,
+            "remove_boundary_points": remove_boundary_points,
             "extract_lidar_metadata": extract_lidar_metadata,
             "mesh_error": mesh_error,
+        }[name]
+
+    if name in {
+        "scoring_surface",
+        "sample_surface",
+        "neighborhood_adjusted_correlation",
+        "normalize_metrics",
+        "compare_power_distributions",
+        "rank_power_distributions",
+    }:
+        from .evaluation import (
+            compare_power_distributions,
+            neighborhood_adjusted_correlation,
+            normalize_metrics,
+            rank_power_distributions,
+            sample_surface,
+            scoring_surface,
+        )
+
+        return {
+            "scoring_surface": scoring_surface,
+            "sample_surface": sample_surface,
+            "neighborhood_adjusted_correlation": neighborhood_adjusted_correlation,
+            "normalize_metrics": normalize_metrics,
+            "compare_power_distributions": compare_power_distributions,
+            "rank_power_distributions": rank_power_distributions,
         }[name]
 
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
