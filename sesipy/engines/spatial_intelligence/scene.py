@@ -27,6 +27,7 @@ class Scene:
         self.scatter_points = None
 
         self._suppress_output = kwargs.get("suppress_output", True)
+        self._disable_tqdm = kwargs.get("disable_tqdm", False)
 
         if self._suppress_output:
             warnings.filterwarnings("ignore")
@@ -159,7 +160,7 @@ class Scene:
             total=len(locations),
             file=sys.stderr,
             dynamic_ncols=True,
-            disable=False,
+            disable=self._disable_tqdm,
         ):
 
             self.receiver.translate_to(vec)
@@ -185,7 +186,7 @@ class Scene:
             total=len(locations),
             file=sys.stderr,
             dynamic_ncols=True,
-            disable=False,
+            disable=self._disable_tqdm,
         ):
 
             self.transmitter.translate_to(vec)
@@ -211,7 +212,7 @@ class Scene:
             total=len(locations),
             file=sys.stderr,
             dynamic_ncols=True,
-            disable=False,
+            disable=self._disable_tqdm,
         ):
 
             self.transmitter.translate_to(vec)
@@ -242,7 +243,7 @@ class Scene:
             total=n_t,
             file=sys.stderr,
             dynamic_ncols=True,
-            disable=False,
+            disable=self._disable_tqdm,
         ):
 
             self.transmitter.translate_to(t_vec)

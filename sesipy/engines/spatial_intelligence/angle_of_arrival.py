@@ -1,3 +1,4 @@
+import meshio
 import numpy as np
 import shapely as sp
 from scipy.signal import find_peaks
@@ -44,6 +45,15 @@ class AoA:
             return None
 
         return (self.left + 0.5 * angle_diff(self.left, self.right)) % (2 * np.pi)
+    
+    
+@dataclass(slots=True)
+class Measurement:
+    position: np.ndarray
+    orientation: np.ndarray
+    aoa: AoA
+    steering_mesh: meshio.Mesh
+    projection: np.ndarray | None = None
 
 
 def aoa_projection_2D(origin, aoa: AoA, length, arc_resolution=32):
@@ -147,3 +157,68 @@ def extract_aoa(steering_mesh, drop_dB=3.0):
     )
     
     
+def spectrum_spatial_distribution_2D(
+    X,
+    Y,
+    pos,
+    theta,
+    power_dbm,
+):
+    rx, ry = pos
+
+    angles = np.arctan2(
+        Y - ry,
+        X - rx,
+    )
+
+    theta = np.asarray(theta)
+
+    power_lin = 10.0 ** (np.asarray(power_dbm) / 10.0)
+
+    order = np.argsort(theta)
+    theta = theta[order]
+    power_lin = power_lin[order]
+
+    theta = np.concatenate([
+        [theta[-1] - 2 * np.pi],
+        theta,
+        [theta[0] + 2 * np.pi],
+    ])
+
+    power_lin = np.concatenate([
+        [power_lin[-1]],
+        power_lin,
+        [power_lin[0]],
+    ])
+
+    projected = np.interp(
+        angles.ravel(),
+        theta,
+        power_lin,
+    ).reshape(X.shape)
+
+    total = projected.sum()
+    if total > 0:
+        projected /= total
+
+    return projected
+    
+    
+def radial_distance_distribution_2D(
+    X, 
+    Y, 
+    source_pos, 
+    target_radius, 
+    sigma=1
+):
+    rx, ry = source_pos
+
+    dist = np.hypot(X - rx, Y - ry)
+
+    radial_prob = np.exp(-0.5 * ((dist - target_radius) / sigma) ** 2)
+
+    total = radial_prob.sum()
+    if total > 0:
+        radial_prob /= total
+
+    return radial_prob
