@@ -3,6 +3,10 @@ import numpy as np
 import shapely as sp
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['Environment', 'Sampler2D', 'Sampler3D']
+
+
 class Sampler2D:
 
     def __init__(self, polygon, centroid_height=0.0):

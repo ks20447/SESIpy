@@ -7,6 +7,10 @@ import pandas as pd
 from pathlib import Path
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['DatabaseReader', 'Database', 'DatabaseAoA', 'DatabasePS', 'decode', 'encode']
+
+
 def encode(arr):
     return base64.b64encode(zlib.compress(arr.tobytes())).decode("ascii")
 

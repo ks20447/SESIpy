@@ -4,6 +4,10 @@ import numpy as np
 from scipy.sparse import coo_matrix
 from scipy.spatial.transform import Rotation
 
+
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['create_mesh_copies', 'scattering_power', 'smooth_point_data', 'threshold_point_data', 'to_dBm']
+
 def translate(mesh: meshio.Mesh, translation: np.ndarray) -> None:
     translation = np.asarray(translation, dtype=float)
     mesh.points += translation

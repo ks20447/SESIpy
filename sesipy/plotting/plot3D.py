@@ -6,6 +6,10 @@ from ..utils.formatting import Symbols
 from abc import ABC, abstractmethod
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['Plot3D']
+
+
 def _mesh_arrays(mesh):
     if isinstance(mesh, pv.DataSet):
         points = np.asarray(mesh.points)

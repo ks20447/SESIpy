@@ -16,6 +16,10 @@ from sklearn.linear_model import RANSACRegressor
 from shapely.prepared import prep
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['cluster_pointcloud', 'extract_lidar_metadata', 'map_yaml_to_polygon', 'mesh_error', 'remove_boundary_points', 'remove_small_holes', 'simulate_lidar']
+
+
 def simulate_lidar(
     meshes,
     position,

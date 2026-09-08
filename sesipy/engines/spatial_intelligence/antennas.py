@@ -13,6 +13,10 @@ from lyceanem.base_classes import (
 from lyceanem.electromagnetics.beamforming import WavefrontWeights
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['IsotropicReceiver', 'PointSource', 'ReceiverArray', 'TransmitterArray']
+
+
 class TransmitterArray(AntennaWrapper):
 
     def __init__(self, freq, power, polarization):

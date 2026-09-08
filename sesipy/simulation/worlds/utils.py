@@ -3,6 +3,10 @@ import numpy as np
 from dataclasses import dataclass
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['Obstacle', 'create_box_mesh', 'create_grid_box_mesh', 'create_grid_plane_mesh', 'create_plane_mesh', 'plane_parameters', 'rotation_matrix_z']
+
+
 @dataclass(slots=True)
 class Obstacle:
     x: float

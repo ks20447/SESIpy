@@ -5,6 +5,10 @@ from scipy.signal import find_peaks
 from dataclasses import dataclass
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['AoA', 'aoa_projection_2D', 'extract_aoa', 'multi_aoa_projection_2D']
+
+
 def angle_diff(a, b):
     return (b - a + np.pi) % (2 * np.pi) - np.pi
 

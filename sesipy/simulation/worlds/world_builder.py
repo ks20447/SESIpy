@@ -4,10 +4,23 @@ import yaml
 import json
 import shapely as sp
 import pyvista as pv
-from .utils import *
+import meshio
+import numpy as np
+from .utils import (
+    Obstacle,
+    create_plane_mesh,
+    create_box_mesh,
+    create_grid_plane_mesh,
+    create_grid_box_mesh,
+    plane_parameters,
+)
 from shapely import wkb
 from pathlib import Path
 from dataclasses import dataclass
+
+
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['Rectangle', 'Wall', 'World', 'WorldBuilder', 'WorldDescriptor']
 
 
 @dataclass(slots=True)

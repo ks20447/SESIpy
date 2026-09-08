@@ -5,6 +5,10 @@ from pathlib import Path
 from .world_builder import WorldBuilder
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['Indoor', 'Outdoor']
+
+
 class Indoor(WorldBuilder):
 
     def __init__(self, scatter_resolution=1.0):

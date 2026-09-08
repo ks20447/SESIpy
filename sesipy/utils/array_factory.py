@@ -1,6 +1,10 @@
 import numpy as np
 from dataclasses import dataclass
 
+
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['ArrayFactory']
+
 @dataclass(frozen=True)
 class ArrayFactory:
 

@@ -4,6 +4,10 @@ from typing import Literal
 from dataclasses import dataclass
 from scipy.spatial.transform import Rotation
 
+
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['NormalFactory']
+
 NormalType = Literal[
     "x",
     "-x",

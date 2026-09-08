@@ -3,6 +3,10 @@ from shapely import contains_xy
 from scipy.interpolate import griddata
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['sample_surface', 'scoring_surface']
+
+
 def scoring_surface(sample_locs, scores, boundary=None, method="nearest"):
     
     x = sample_locs[:, 0]

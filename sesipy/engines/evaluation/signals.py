@@ -2,6 +2,10 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['compare_power_distributions', 'neighborhood_adjusted_correlation', 'normalize_metrics', 'rank_power_distributions']
+
+
 def neighborhood_adjusted_correlation(reference, targets, target_locs, n_neighbors):
     reference = np.asarray(reference, dtype=float).ravel()
     targets = np.asarray(targets, dtype=float)

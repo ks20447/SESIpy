@@ -10,6 +10,10 @@ from lyceanem.base_classes import points, structures
 from .utils import create_mesh_copies
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['Scene']
+
+
 class Scene:
 
     def __init__(self, scatter=False, cuda=True, **kwargs):

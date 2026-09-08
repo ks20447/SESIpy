@@ -11,6 +11,10 @@ from lyceanem.base_classes import (
 from .utils import translate, rotate
 from ...utils import NormalFactory
 
+
+# Public exports used by scripts/generate_inits.py.
+__all__ = []
+
 def update_id(func):
     @wraps(func)
     def wrapper(self, *args, **kwargs):

@@ -3,6 +3,10 @@ from dataclasses import dataclass
 from contextlib import contextmanager
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['Symbols', 'suppress_c_output']
+
+
 @contextmanager
 def suppress_c_output():
     """Suppress C/C++ printf output by redirecting file descriptors."""

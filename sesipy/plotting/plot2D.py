@@ -7,6 +7,10 @@ from shapely.geometry import Polygon, MultiPolygon
 from ..engines.evaluation.signals import normalize_metrics
 
 
+# Public exports used by scripts/generate_inits.py.
+__all__ = ['Plot2D', 'mpl_font_size', 'mpl_use_cmap', 'mpl_use_latex', 'mpl_use_seaborn']
+
+
 def mpl_use_latex(val: bool):
     rcParams.update({"text.usetex": val, "font.family": "Times"})
 
