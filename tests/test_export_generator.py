@@ -109,6 +109,23 @@ assert 'sesipy.group.broken' not in sys.modules
 '''], cwd=self.root, capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_notebooks_are_not_scanned_or_modified(self):
+        notebook = self.write('sesipy/notebooks/__init__.py', '# Handwritten notebook setup\n')
+        self.write('sesipy/notebooks/experiment.py', 'this is not valid Python!\n')
+        self.write('sesipy/notebooks/nested/helper.py', 'def helper(): pass\n')
+        original = notebook.read_bytes()
+        expected = generator.generate(self.root)
+        self.assertFalse(any('notebooks' in p.relative_to(self.root).parts for p in expected))
+        self.assertEqual(self.run_cli().returncode, 0)
+        self.assertEqual(notebook.read_bytes(), original)
+        self.assertFalse((self.root / 'sesipy/notebooks/nested/__init__.py').exists())
+        self.assertEqual(self.run_cli('--check').returncode, 0)
+
+    def test_notebook_exclusion_does_not_match_similarly_named_directories(self):
+        self.write('sesipy/notebooks_extra/helper.py', 'def helper(): pass\n')
+        with self.assertRaisesRegex(generator.ExportError, 'exactly one'):
+            generator.generate(self.root)
+
     def test_repository_generated_files_are_current(self):
         for path, expected in generator.generate(ROOT).items():
             self.assertEqual(path.read_text(encoding='utf-8'), expected, str(path))

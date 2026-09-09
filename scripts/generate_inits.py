@@ -96,7 +96,12 @@ def generate(root):
         raise ExportError('api_exports.json must contain a packages object')
     selections = {name: names_list(names, f'api_exports.json: {name}')
                   for name, names in config['packages'].items()}
-    paths = sorted(p for p in package_root.rglob('*.py') if '__pycache__' not in p.parts)
+    # Notebooks are exploratory code, not modules in the generated public API.
+    notebooks = package_root / 'notebooks'
+    paths = sorted(
+        p for p in package_root.rglob('*.py')
+        if '__pycache__' not in p.parts and notebooks not in p.parents
+    )
     packages = {package_root}
     for path in paths:
         packages.update(parent for parent in path.parents

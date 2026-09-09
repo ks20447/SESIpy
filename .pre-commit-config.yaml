@@ -6,4 +6,4 @@ repos:
         entry: python scripts/generate_inits.py
         language: system
         pass_filenames: false
-        always_run: true
+        exclude: ^sesipy/notebooks/
